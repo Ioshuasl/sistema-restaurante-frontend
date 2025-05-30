@@ -99,7 +99,7 @@ export default function App() {
         element={<NewProduct/>}
       />
       <Route
-        path="/admin/product"
+        path="/admin/product/consult"
         element={<ProductManagment/>}
       />
       <Route
@@ -107,7 +107,7 @@ export default function App() {
         element = {<NewProductCategory/>}
       />
       <Route
-        path="/admin/category-product"
+        path="/admin/category-product/consult"
         element = {<ProductCategoryManagment/>}
       />
       <Route
@@ -115,7 +115,7 @@ export default function App() {
         element = {<NewUser/>}
       />
       <Route
-        path="/admin/user"
+        path="/admin/user/consult"
         element = {<UserManagment/>}
       />
       <Route

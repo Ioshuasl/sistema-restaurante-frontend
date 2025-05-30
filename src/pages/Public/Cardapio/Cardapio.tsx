@@ -10,6 +10,7 @@ type Product = {
 };
 
 type Category = {
+  id: number
   name: string;
   products: Product[];
 };
@@ -26,6 +27,7 @@ type CardapioProps = {
 
 const menu: Category[] = [
   {
+    id:1,
     name: 'Lanches',
     products: [
       {
@@ -45,6 +47,7 @@ const menu: Category[] = [
     ],
   },
   {
+    id:2,
     name: 'Bebidas',
     products: [
       {
@@ -64,6 +67,7 @@ const menu: Category[] = [
     ],
   },
   {
+    id:3,
     name: 'Sobremesas',
     products: [
       {
@@ -131,8 +135,8 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
       {/* NAVBAR */}
       <nav className="bg-white shadow-md sticky top-0 z-30 border-b border-gray-200">
         <ul className="flex justify-center gap-6 py-4 font-medium text-gray-700">
-          {menu.map((category, index) => (
-            <li key={index}>
+          {menu.map((category) => (
+            <li key={category.id}>
               <a
                 href={`#${category.name}`}
                 className="hover:text-red-600 transition duration-200"

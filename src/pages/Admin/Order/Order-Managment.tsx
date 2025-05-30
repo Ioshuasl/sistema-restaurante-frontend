@@ -1,20 +1,20 @@
 import { useState } from "react";
-import { BadgeCheck, Clock, XCircle } from "lucide-react";
+import { BadgeCheck, Clock, XCircle, Truck } from "lucide-react";
 import Sidebar from "../Components/Sidebar";
 
 type Order = {
-    id: Number;
+    id: number;
     clientName: string;
     items: { name: string; quantity: number }[];
     total: number;
-    status: "pendente" | "finalizado" | "cancelado";
+    status: "preparando" | "entrega" | "finalizado" | "cancelado";
 };
 
 export default function OrderManagment() {
-    const [statusFilter, setStatusFilter] = useState<"todos" | "pendente" | "finalizado" | "cancelado">("todos");
+    const [statusFilter, setStatusFilter] = useState<"todos" | "preparando" | "entrega" | "finalizado" | "cancelado">("todos");
     const [searchId, setSearchId] = useState("");
 
-    const mockOrders: Order[] = [
+    const [orders, setOrders] = useState<Order[]>([
         {
             id: 10,
             clientName: "João Silva",
@@ -22,8 +22,9 @@ export default function OrderManagment() {
                 { name: "Pizza Calabresa", quantity: 1 },
                 { name: "Coca-Cola 2L", quantity: 1 },
             ],
+            
             total: 58.9,
-            status: "pendente",
+            status: "preparando",
         },
         {
             id: 11,
@@ -32,9 +33,24 @@ export default function OrderManagment() {
             total: 42.0,
             status: "finalizado",
         },
-    ];
+        {
+            id: 12,
+            clientName: "Carlos Oliveira",
+            items: [{ name: "Hambúrguer", quantity: 2 }],
+            total: 32.5,
+            status: "entrega",
+        },
+    ]);
 
-    const filteredOrders = mockOrders.filter((order) => {
+    const handleStatusChange = (orderId: number, newStatus: Order["status"]) => {
+        setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+                order.id === orderId ? { ...order, status: newStatus } : order
+            )
+        );
+    };
+
+    const filteredOrders = orders.filter((order) => {
         const matchStatus = statusFilter === "todos" || order.status === statusFilter;
         const matchId = order.id.toString().includes(searchId);
         return matchStatus && matchId;
@@ -47,14 +63,14 @@ export default function OrderManagment() {
             <Sidebar />
 
             {/* Conteúdo */}
-            <main>
+            <main className="flex-1">
                 <div className="p-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Pedidos</h1>
 
                     {/* Filtros */}
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                         <div className="flex gap-2 flex-wrap">
-                            {["todos", "pendente", "finalizado", "cancelado"].map((status) => (
+                            {["todos", "preparando", "entrega", "finalizado", "cancelado"].map((status) => (
                                 <button
                                     key={status}
                                     onClick={() => setStatusFilter(status as any)}
@@ -77,20 +93,24 @@ export default function OrderManagment() {
                         />
                     </div>
 
-                    <button className="flex-1 bg-indigo-600 p-4 mb-5 font-bold hover:bg-indigo-700 text-white text-sm py-2 rounded-lg transition">Cadastrar Novo Produto</button>
-
                     <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                         {filteredOrders.map((order) => (
                             <div
                                 key={order.id}
                                 className="bg-white shadow-md rounded-xl p-5 flex flex-col justify-between border border-gray-100"
                             >
-                                <div className="flex items-center justify-between mb-2">
-                                    <h2 className="text-lg font-semibold text-indigo-600">Pedido #{order.id}</h2>
-                                    {order.status === "pendente" && (
+                                <div className="flex flex-col justify-between mb-2">
+                                    <h2 className="text-lg font-semibold text-indigo-600">Pedido Nº{order.id}</h2>
+                                    {order.status === "preparando" && (
                                         <span className="flex items-center gap-1 text-yellow-600 text-sm">
                                             <Clock size={16} />
-                                            Pendente
+                                            Preparando Pedido
+                                        </span>
+                                    )}
+                                    {order.status === "entrega" && (
+                                        <span className="flex items-center gap-1 text-blue-600 text-sm">
+                                            <Truck size={16} />
+                                            Saiu para Entrega
                                         </span>
                                     )}
                                     {order.status === "finalizado" && (
@@ -123,22 +143,56 @@ export default function OrderManagment() {
                                     Total: R$ {order.total.toFixed(2)}
                                 </p>
 
-                                <div className="flex justify-between gap-2 mt-auto">
-                                    {order.status === "pendente" && (
+                                <div className="flex justify-between gap-2">
+                                    {order.status === "preparando" && (
                                         <>
-                                            <button className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-2 rounded-lg transition">
-                                                Finalizar
+                                            <button
+                                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 rounded-lg transition"
+                                                onClick={() =>
+                                                    handleStatusChange(order.id, "entrega")
+                                                }
+                                            >
+                                                Saiu para Entrega
                                             </button>
-                                            <button className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition">
+                                            <button
+                                                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition"
+                                                onClick={() =>
+                                                    handleStatusChange(order.id, "cancelado")
+                                                }
+                                            >
                                                 Cancelar
                                             </button>
                                         </>
                                     )}
-                                    {order.status !== "pendente" && (
-                                        <button className="w-full bg-gray-200 text-gray-700 text-sm py-2 rounded-lg cursor-not-allowed" disabled>
-                                            Pedido {order.status}
-                                        </button>
+                                    {order.status === "entrega" && (
+                                        <>
+                                            <button
+                                                className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-2 rounded-lg transition"
+                                                onClick={() =>
+                                                    handleStatusChange(order.id, "finalizado")
+                                                }
+                                            >
+                                                Finalizar
+                                            </button>
+                                            <button
+                                                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition"
+                                                onClick={() =>
+                                                    handleStatusChange(order.id, "cancelado")
+                                                }
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </>
                                     )}
+                                    {order.status !== "preparando" &&
+                                        order.status !== "entrega" && (
+                                            <button
+                                                className="w-full bg-gray-200 text-gray-700 text-sm py-2 rounded-lg cursor-not-allowed"
+                                                disabled
+                                            >
+                                                Pedido {order.status}
+                                            </button>
+                                        )}
                                 </div>
                             </div>
                         ))}
