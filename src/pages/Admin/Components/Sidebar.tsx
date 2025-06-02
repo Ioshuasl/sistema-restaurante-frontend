@@ -193,6 +193,13 @@ export default function Sidebar() {
                   >
                     Cadastrar Usuário
                   </Link>
+                  <Link
+                    to="/admin/user/role"
+                    className={isActive("/admin/user/role")}
+                    onClick={() => setIsSidebarOpen(false)}
+                  >
+                    Gerenciar Cargo
+                  </Link>
                 </div>
               )}
             </div>

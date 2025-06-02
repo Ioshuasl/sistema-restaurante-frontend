@@ -14,6 +14,7 @@ import NewUser from "./pages/Admin/Users/New-User";
 import UserManagment from "./pages/Admin/Users/User-Managment";
 import ProductCategoryManagment from "./pages/Admin/Product-Category/Product-Category-Managment";
 import Config from "./pages/Admin/Config/Config";
+import RoleManagment from "./pages/Admin/Users/Role-Managment";
 
 
 type Product = {
@@ -121,6 +122,10 @@ export default function App() {
       <Route
         path="/admin/config"
         element = {<Config/>}
+      />
+      <Route
+        path="/admin/user/role"
+        element = {<RoleManagment/>}
       />
     </Routes>
   );

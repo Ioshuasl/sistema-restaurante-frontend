@@ -191,7 +191,7 @@ export default function UserManagment() {
                                 key={user.id}
                                 className="border border-gray-300 rounded-md p-4 flex flex-col gap-2"
                             >
-                                <span className="font-semibold">{user.name}</span>
+                                <span className="font-semibold">{user.name.charAt(0).toUpperCase() + user.name.slice(1)}</span>
                                 <span className="text-gray-600 text-sm">CPF: {user.cpf}</span>
                                 <span className="text-gray-600 text-sm">
                                     Cargo: {getCargoName(user.cargoId)}
