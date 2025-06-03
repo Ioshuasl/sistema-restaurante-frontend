@@ -19,15 +19,22 @@ export default function Config() {
     const [email, setEmail] = useState("");
     const [taxaFrete, setTaxaFrete] = useState("");
 
+    function limparNumero(valor:any) {
+        return valor.replace(/\D/g, '');
+    }
+
     // Função para buscar dados do CNPJ
     const handleBuscarCNPJ = async () => {
-        if (!cnpj) {
-            alert("Digite um CNPJ válido.");
+
+        const cnpjFormatado = await limparNumero(cnpj)
+
+        if (cnpjFormatado.length !== 14) {
+            alert("CNPJ inválido.");
             return;
         }
 
         try {
-            const response = await fetch(`https://publica.cnpj.ws/cnpj/${cnpj}`, {
+            const response = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjFormatado}`, {
                 method: 'GET',
                 headers: {
                     "Accept": "*/*"
@@ -62,13 +69,16 @@ export default function Config() {
 
     // Função para buscar dados do CEP
     const handleBuscarCEP = async () => {
-        if (!cep) {
-            alert("Digite um CEP válido.");
+
+        const cepFormatado = await limparNumero(cep)
+
+        if (cepFormatado.length !== 8) {
+            alert("CEP inválido.");
             return;
         }
 
         try {
-            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const response = await fetch(`https://viacep.com.br/ws/${cepFormatado}/json/`);
             const data = await response.json();
             if (data.erro) {
                 alert("CEP não encontrado.");
@@ -196,7 +206,7 @@ export default function Config() {
                                         </div>
                                     </div>
                                     {[
-                                        {label: "Tipo do Logadouro", value:tipoLogadouro, setter: setTipoLogadouro},
+                                        { label: "Tipo do Logadouro", value: tipoLogadouro, setter: setTipoLogadouro },
                                         { label: "Logadouro", value: logadouro, setter: setLogadouro },
                                         { label: "Número", value: numero, setter: setNumero },
                                         { label: "Quadra", value: quadra, setter: setQuadra },
