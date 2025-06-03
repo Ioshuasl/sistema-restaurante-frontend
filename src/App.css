@@ -8,3 +8,19 @@
 html {
   scroll-behavior: smooth;
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+    /* Ocultar scrollbar para Chrome, Safari e Opera */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    /* Ocultar scrollbar para IE, Edge e Firefox */
+    .scrollbar-hide {
+        -ms-overflow-style: none; /* IE e Edge */
+        scrollbar-width: none; /* Firefox */
+    }
+}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -54,10 +54,10 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-screen w-64 bg-white shadow-lg px-4 py-6 z-50 transform
+          fixed top-0 left-0 h-full w-64 bg-white shadow-lg px-4 py-6 z-50 transform overflow-y-scroll scrollbar-hide
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           transition-transform duration-300 ease-in-out
-          md:static md:translate-x-0 md:flex flex-col justify-between
+          md:static md:translate-x-0 md:flex flex-col justify-between 
         `}
       >
         <div>
@@ -217,9 +217,9 @@ export default function Sidebar() {
         </div>
 
         {/* Sair */}
-        <div className="pt-6 border-t border-gray-200">
+        <div className="border-t border-gray-200 mt-2">
           <button
-            className="w-full text-left flex items-center gap-2 px-4 py-2 rounded hover:bg-red-600 hover:text-white transition text-gray-700"
+            className="w-full text-left flex items-center gap-2 px-2 py-2 rounded hover:bg-red-600 hover:text-white transition text-gray-700"
             onClick={() => setIsSidebarOpen(false)}
           >
             <LogOut size={20} />
