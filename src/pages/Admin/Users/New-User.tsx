@@ -75,42 +75,44 @@ export default function NewUser() {
             <main className="flex flex-1 bg-gray-100">
                 <Sidebar />
 
-                <div className="flex flex-col flex-1 bg-white rounded-lg shadow-lg p-6 max-w-lg mx-auto">
+                <div className="flex flex-col flex-1 bg-white rounded-lg shadow-lg p-6">
                     <h1 className="text-2xl font-bold mb-4">Cadastro de Usuário</h1>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block mb-1 font-medium">Nome:</label>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block mb-1 font-medium">CPF:</label>
-                            <input
-                                type="text"
-                                value={cpf}
-                                onChange={(e) => setCpf(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block mb-1 font-medium">Cargo:</label>
-                            <select
-                                value={cargoId}
-                                onChange={(e) => setCargoId(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                            >
-                                {cargos.map((cargo) => (
-                                    <option key={cargo.id} value={cargo.id}>
-                                        {cargo.name}
-                                    </option>
-                                ))}
-                            </select>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block mb-1 font-medium">Nome:</label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-medium">CPF:</label>
+                                <input
+                                    type="text"
+                                    value={cpf}
+                                    onChange={(e) => setCpf(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-medium">Cargo:</label>
+                                <select
+                                    value={cargoId}
+                                    onChange={(e) => setCargoId(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                >
+                                    {cargos.map((cargo) => (
+                                        <option key={cargo.id} value={cargo.id}>
+                                            {cargo.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                         <div className="flex items-center space-x-2">
 
@@ -120,25 +122,27 @@ export default function NewUser() {
                                 onChange={() => setIsAdmin(!isAdmin)}
                             />
                         </div>
-                        <div>
-                            <label className="block mb-1 font-medium">Login:</label>
-                            <input
-                                type="text"
-                                value={login}
-                                onChange={(e) => setLogin(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block mb-1 font-medium">Senha:</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                required
-                            />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block mb-1 font-medium">Login:</label>
+                                <input
+                                    type="text"
+                                    value={login}
+                                    onChange={(e) => setLogin(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 font-medium">Senha:</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                    required
+                                />
+                            </div>
                         </div>
                         <div className="flex gap-4">
                             <button

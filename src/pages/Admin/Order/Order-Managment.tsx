@@ -22,7 +22,7 @@ export default function OrderManagment() {
                 { name: "Pizza Calabresa", quantity: 1 },
                 { name: "Coca-Cola 2L", quantity: 1 },
             ],
-            
+
             total: 58.9,
             status: "preparando",
         },
@@ -60,11 +60,11 @@ export default function OrderManagment() {
         <div className="min-h-screen flex bg-gray-100">
             <title>Gerenciamento de Pedidos</title>
             {/* Sidebar */}
-            <Sidebar />
 
             {/* Conteúdo */}
-            <main className="flex-1">
-                <div className="p-6">
+            <main className="flex flex-1 bg-gray-100">
+                <Sidebar />
+                <div className="flex-1 p-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Pedidos</h1>
 
                     {/* Filtros */}

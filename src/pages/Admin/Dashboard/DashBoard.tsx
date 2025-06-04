@@ -42,7 +42,7 @@ export default function Dashboard() {
             <title>Dashboard</title>
 
             {/* Conteúdo */}
-            <main className="flex flex flex-1 bg-gray-100">
+            <main className="flex flex-1 bg-gray-100">
                 {/* Sidebar */}
                 <Sidebar />
                 <div className='flex-1 p-6'>

@@ -11,6 +11,7 @@ import {
   Settings,
   Menu,
   X,
+  CreditCard,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -99,7 +100,7 @@ export default function Sidebar() {
             <div>
               <button
                 onClick={() => toggleMenu("product")}
-                className="flex items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
+                className="flex text-gray-700 items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
               >
                 <Package size={20} />
                 Produto
@@ -110,7 +111,7 @@ export default function Sidebar() {
                 )}
               </button>
               {openMenus.includes("product") && (
-                <div className="ml-6 flex flex-col gap-1">
+                <div className="ml-6 flex flex-col gap-2">
                   <Link
                     to="/admin/product/consult"
                     className={isActive("/admin/product/consult")}
@@ -133,7 +134,7 @@ export default function Sidebar() {
             <div>
               <button
                 onClick={() => toggleMenu("category")}
-                className="flex items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
+                className="flex text-gray-700 items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
               >
                 <Package size={20} />
                 Categoria de Produto
@@ -144,7 +145,7 @@ export default function Sidebar() {
                 )}
               </button>
               {openMenus.includes("category") && (
-                <div className="ml-6 flex flex-col gap-1">
+                <div className="ml-6 flex flex-col gap-2">
                   <Link
                     to="/admin/category-product/consult"
                     className={isActive("/admin/category-product/consult")}
@@ -163,11 +164,21 @@ export default function Sidebar() {
               )}
             </div>
 
+            {/*Forma de Pagamento*/}
+            <Link
+              to="/admin/payment-method"
+              className={`flex items-center gap-2 px-2 py-2 rounded ${isActive("/admin/payment-method")}`}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <CreditCard size={20}/>
+              Forma de Pagamento
+            </Link>
+
             {/* Usuários */}
             <div>
               <button
                 onClick={() => toggleMenu("user")}
-                className="flex items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
+                className="flex text-gray-700 items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
               >
                 <Users size={20} />
                 Usuários
@@ -178,7 +189,7 @@ export default function Sidebar() {
                 )}
               </button>
               {openMenus.includes("user") && (
-                <div className="ml-6 flex flex-col gap-1">
+                <div className="ml-6 flex flex-col gap-2">
                   <Link
                     to="/admin/user/consult"
                     className={isActive("/admin/user/consult")}

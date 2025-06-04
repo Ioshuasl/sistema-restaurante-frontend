@@ -73,56 +73,69 @@ export default function NewProduct() {
   return (
     <div className="min-h-screen flex bg-gray-100">
       <title>Gerenciamento de Produtos</title>
-      <Sidebar />
-      <main className="flex-1">
-        <div className="flex flex-col items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg">
+      <main className="flex flex-1 bg-gray-100">
+        <Sidebar />
+        <div className="flex flex-col flex-1 items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full flex-1">
             <h2 className="text-2xl font-bold mb-4 text-gray-800">
               Cadastrar Produto
             </h2>
             <form className="flex flex-col gap-4">
-              <label className="text-sm text-gray-600">
-                Nome:
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </label>
+              <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+                <div className='flex flex-col flex-2 gap-4'>
+                  <label className="text-sm text-gray-600">
+                    Nome:
+                    <input
+                      type="text"
+                      value={name}
+                      placeholder='Nome'
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </label>
+                </div>
+                <div className='flex flex-col flex-1 gap-4'>
+                  <label className="text-sm text-gray-600">
+                    Categoria:
+                    <select
+                      value={categoryId}
+                      onChange={(e) => setCategoryId(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">Selecione uma categoria</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className='flex flex-col flex-0.5 gap-4'>
+                  <label className="text-sm text-gray-600">
+                    Preço:
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder='00.00'
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </label>
+                </div>
+              </div>
               <label className="text-sm text-gray-600">
                 Descrição:
                 <textarea
+                  rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </label>
-              <label className="text-sm text-gray-600">
-                Preço:
-                <input
-                  type="number"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </label>
-              <label className="text-sm text-gray-600">
-                Categoria:
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+
+
               <label className="text-sm text-gray-600">
                 Ativo:
                 <div className="flex items-center mt-1">

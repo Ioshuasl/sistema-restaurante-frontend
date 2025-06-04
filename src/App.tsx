@@ -15,6 +15,7 @@ import UserManagment from "./pages/Admin/Users/User-Managment";
 import ProductCategoryManagment from "./pages/Admin/Product-Category/Product-Category-Managment";
 import Config from "./pages/Admin/Config/Config";
 import RoleManagment from "./pages/Admin/Users/Role-Managment";
+import PaymentMethod from "./pages/Admin/Payment-Method/Payment-Method";
 
 
 type Product = {
@@ -110,6 +111,10 @@ export default function App() {
       <Route
         path="/admin/category-product/consult"
         element = {<ProductCategoryManagment/>}
+      />
+      <Route
+        path="/admin/payment-method"
+        element = {<PaymentMethod/>}
       />
       <Route
         path="/admin/user/new"

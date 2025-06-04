@@ -228,7 +228,7 @@ export default function ProductManagement() {
 
             {/* Modal de edição */}
             {editingProduct && (
-                <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.50)] z-50">
+                <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.70)] z-50">
                     <div className="bg-white rounded-xl p-6 w-full max-w-250 overflow-y-auto max-h-[90vh]">
                         <h2 className="text-xl font-bold mb-4 text-gray-800">Editar {editingProduct.name}</h2>
 
