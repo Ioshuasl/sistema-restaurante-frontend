@@ -148,14 +148,14 @@ export default function NewUser() {
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
+                                className="w-32 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
+                                className="w-32 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
                             >
                                 Cadastrar
                             </button>

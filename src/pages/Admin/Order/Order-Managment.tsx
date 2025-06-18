@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { BadgeCheck, Clock, XCircle, Truck } from "lucide-react";
 import Sidebar from "../Components/Sidebar";
 
@@ -64,7 +64,7 @@ export default function OrderManagment() {
             {/* Conteúdo */}
             <main className="flex flex-1 bg-gray-100">
                 <Sidebar />
-                <div className="flex-1 p-6">
+                <div className="p-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Pedidos</h1>
 
                     {/* Filtros */}

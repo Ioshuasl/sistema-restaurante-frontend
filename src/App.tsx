@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import "./App.css";
+import 'react-toastify/dist/ReactToastify.css'; // Importando os estilos do Toastify
 import Cardapio from "./pages/Public/Cardapio/Cardapio";
 import Checkout from "./pages/Public/Checkout/Checkout";
 import PedidoConfirmado from "./pages/Public/Pedido-Confirmado/Pedido-Confirmado";
@@ -64,6 +65,7 @@ export default function App() {
   };
 
   return (
+    
     <Routes>
       <Route
         path="/"

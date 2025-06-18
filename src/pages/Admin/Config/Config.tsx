@@ -17,7 +17,7 @@ export default function Config() {
     const [estado, setEstado] = useState("");
     const [telefone, setTelefone] = useState("");
     const [email, setEmail] = useState("");
-    const [taxaFrete, setTaxaFrete] = useState("");
+    const [taxaEntrega, setTaxaEntrega] = useState("");
 
     function limparNumero(valor:any) {
         return valor.replace(/\D/g, '');
@@ -116,7 +116,7 @@ export default function Config() {
                 telefone,
                 email,
             },
-            taxaFrete,
+            taxaEntrega,
         };
 
         console.log("Dados enviados:", dadosConfig);
@@ -256,17 +256,17 @@ export default function Config() {
                                 </div>
                             </div>
 
-                            {/* Seção: Taxa de Frete */}
+                            {/* Seção: Taxa de Entrega */}
                             <div className="mb-6">
-                                <h2 className="text-lg font-semibold mb-2">Taxa de Frete</h2>
+                                <h2 className="text-lg font-semibold mb-2">Taxa de Entrega</h2>
                                 <div>
-                                    <label className="block mb-1 font-medium">Taxa de Frete:</label>
+                                    <label className="block mb-1 font-medium">Taxa de Entrega:</label>
                                     <input
                                         type="number"
                                         step="0.01"
-                                        placeholder="Digite a taxa de frete (ex.: 5.00)"
-                                        value={taxaFrete}
-                                        onChange={(e) => setTaxaFrete(e.target.value)}
+                                        placeholder="Digite a taxa de Entrega (ex.: 5.00)"
+                                        value={taxaEntrega}
+                                        onChange={(e) => setTaxaEntrega(e.target.value)}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     />
                                 </div>
