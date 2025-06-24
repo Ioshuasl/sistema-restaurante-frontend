@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../Components/Sidebar";
 import ToggleSwitch from "../Components/ToggleSwitch";
 import { Plus, Pencil, X } from "lucide-react";
+import { getAllFormasPagamento,updateFormaPagamento,createFormaPagamento,deleteFormaPagamento } from "@/services/formaPagamentoService";
 
 type PaymentMethodType = {
     id: number;
@@ -11,11 +12,21 @@ type PaymentMethodType = {
 
 export default function PaymentMethod() {
     // Estado das formas de pagamento (mock para teste)
-    const [paymentMethods, setPaymentMethods] = useState<PaymentMethodType[]>([
-        { id: 1, name: "Cartão de Crédito", isAtivo: true },
-        { id: 2, name: "Boleto Bancário", isAtivo: false },
-        { id: 3, name: "Pix", isAtivo: true },
-    ]);
+    const [paymentMethods, setPaymentMethods] = useState<PaymentMethodType[]>([]);
+
+    async function fetchPaymentMethods(){
+        try {
+            const data = await getAllFormasPagamento()
+            console.log(data)
+            setPaymentMethods(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    useEffect(() => {
+        fetchPaymentMethods()
+    } , [])
 
     // Filtro
     const [searchName, setSearchName] = useState("");

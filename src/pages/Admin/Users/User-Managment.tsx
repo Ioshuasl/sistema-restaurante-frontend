@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import Sidebar from "../Components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../Components/ToggleSwitch";
+import { getAllUsers } from "@/services/userService";
+import { getAllCargos } from "@/services/cargoService";
 
 type Cargo = {
     id: number;
@@ -19,44 +21,10 @@ type User = {
     password: string;
 };
 
-const cargos: Cargo[] = [
-    { id: 1, name: "colaborador" },
-    { id: 2, name: "administrador" },
-    { id: 3, name: "entregador" },
-];
-
-const usersData: User[] = [
-    {
-        id: 1,
-        name: "felipe",
-        cpf: "111.222.333-12",
-        cargoId: 1,
-        isAdmin: false,
-        login: "felipe",
-        password: "123456",
-    },
-    {
-        id: 2,
-        name: "alexandre",
-        cpf: "222.333.444-23",
-        cargoId: 2,
-        isAdmin: true,
-        login: "alexandre",
-        password: "123456",
-    },
-    {
-        id: 3,
-        name: "tatiany",
-        cpf: "333.444.555-34",
-        cargoId: 3,
-        isAdmin: false,
-        login: "tatiany",
-        password: "123456",
-    },
-];
 
 export default function UserManagment() {
-    const [users, setUsers] = useState<User[]>(usersData);
+    const [users, setUsers] = useState<User[]>([]);
+    const [cargos, setCargos] = useState<Cargo[]>([])
     const [searchName, setSearchName] = useState("");
     const [searchCpf, setSearchCpf] = useState("");
     const [selectedCargo, setSelectedCargo] = useState<number | "">("");
@@ -64,10 +32,38 @@ export default function UserManagment() {
         "all"
     );
 
+    
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [editedUser, setEditedUser] = useState<User | null>(null);
-
+    
     const navigate = useNavigate();
+
+    //funcao para puxar os usuários
+    async function fetchUsers(){
+        try {
+            const data = await getAllUsers()
+            console.log(data)
+            setUsers(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    //funcao para puxar os cargos
+    async function fetchCargos(){
+        try {
+            const data = await getAllCargos()
+            console.log(data)
+            setCargos(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    useEffect(() => {
+        fetchCargos()
+        fetchUsers()
+    }, [])
 
     const handleEditClick = (user: User) => {
         setEditingUser(user);

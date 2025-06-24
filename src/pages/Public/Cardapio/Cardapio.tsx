@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { getMenu } from '@/services/menuService';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 type Product = {
@@ -11,7 +12,7 @@ type Product = {
 
 type Category = {
   id: number
-  name: string;
+  nomeCategoriaProduto: string;
   products: Product[];
 };
 
@@ -25,72 +26,24 @@ type CardapioProps = {
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
 };
 
-const menu: Category[] = [
-  {
-    id:1,
-    name: 'Lanches',
-    products: [
-      {
-        id: 1,
-        name: 'X-Burger',
-        description: 'Pão, hambúrguer, queijo, alface e tomate.',
-        price: 15.9,
-        image: 'https://via.placeholder.com/150',
-      },
-      {
-        id: 2,
-        name: 'X-Bacon',
-        description: 'Pão, hambúrguer, bacon, queijo e alface.',
-        price: 18.9,
-        image: 'https://via.placeholder.com/150',
-      },
-    ],
-  },
-  {
-    id:2,
-    name: 'Bebidas',
-    products: [
-      {
-        id: 3,
-        name: 'Refrigerante Lata',
-        description: '350ml - Coca, Pepsi ou Guaraná',
-        price: 6.0,
-        image: 'https://via.placeholder.com/150',
-      },
-      {
-        id: 4,
-        name: 'Suco Natural',
-        description: 'Laranja, Limão ou Abacaxi',
-        price: 7.5,
-        image: 'https://via.placeholder.com/150',
-      },
-    ],
-  },
-  {
-    id:3,
-    name: 'Sobremesas',
-    products: [
-      {
-        id: 5,
-        name: 'Petit Gateau',
-        description: 'Bolo de chocolate quente com brigadeiro',
-        price: 12.0,
-        image: 'https://via.placeholder.com/150',
-      },
-      {
-        id: 6,
-        name: 'Milk shake de morango',
-        description: 'Hmmmmmm.. é muito cremoso',
-        price: 10.5,
-        image: 'https://via.placeholder.com/150',
-      },
-    ],
-  },
-];
-
 export default function Cardapio({ cart, setCart }: CardapioProps) {
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [menu, setMenu] = useState<Category[]>([]);
   const navigate = useNavigate();
+
+  async function fetchMenu() {
+    try {
+      const data = await getMenu();
+      console.log(data)
+      setMenu(data);
+    } catch (error) {
+      console.error(error)
+    }
+  }
+  
+  useEffect(() => {
+    fetchMenu()
+  }, [])
 
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -138,10 +91,10 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
           {menu.map((category) => (
             <li key={category.id}>
               <a
-                href={`#${category.name}`}
+                href={`#${category.nomeCategoriaProduto}`}
                 className="hover:text-red-600 transition duration-200"
               >
-                {category.name}
+                {category.nomeCategoriaProduto}
               </a>
             </li>
           ))}
@@ -162,9 +115,9 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
 
         {/* LISTAGEM DE CATEGORIAS */}
         {menu.map((category, index) => (
-          <section key={index} id={category.name} className="mb-16 scroll-mt-32">
+          <section key={index} id={category.nomeCategoriaProduto} className="mb-16 scroll-mt-32">
             <h2 className="text-2xl font-bold mb-6 text-red-600 border-b pb-2">
-              {category.name}
+              {category.nomeCategoriaProduto}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {category.products.map((product) => (

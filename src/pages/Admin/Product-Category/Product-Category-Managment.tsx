@@ -1,7 +1,8 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../Components/Sidebar";
 import { useNavigate } from "react-router-dom";
+import { getAllCategories } from "@/services/categoryService";
 
 type Category = {
     id: number;
@@ -9,15 +10,25 @@ type Category = {
 };
 
 export default function ProductCategoryManagment() {
-    const [categories, setCategories] = useState<Category[]>([
-        { id: 1, name: "Pizza" },
-        { id: 2, name: "Bebida" },
-        { id: 3, name: "Lanche" },
-    ]);
+    const [categories, setCategories] = useState<Category[]>([]);
+
+    async function fetchCategories(){
+        try {
+            const data = await getAllCategories()
+            console.log(data)
+            setCategories(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
 
     const [searchTerm, setSearchTerm] = useState("");
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [editedName, setEditedName] = useState("");
+
+    useEffect(() => {
+        fetchCategories()
+    }, [])
 
     const handleEditClick = (category: Category) => {
         setEditingCategory(category);

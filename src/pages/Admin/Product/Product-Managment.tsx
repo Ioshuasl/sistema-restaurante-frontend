@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../Components/Sidebar";
 import { Pencil, Trash2 } from "lucide-react";
 import ToggleSwitch from "../Components/ToggleSwitch";
 import { useNavigate } from "react-router-dom";
+import { getAllProducts } from "@/services/productService";
+import { getAllCategories } from "@/services/categoryService";
 
 type Product = {
     id: number;
@@ -25,41 +27,34 @@ export default function ProductManagement() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<number | "">("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-    const [products, setProducts] = useState<Product[]>([
-        {
-            id: 1,
-            name: "Pizza Calabresa",
-            description: "Pizza deliciosa com calabresa",
-            price: 35.9,
-            categoryId: 1,
-            isAtivo: true,
-            imageUrl: "https://via.placeholder.com/150" // Exemplo
-        },
-        {
-            id: 2,
-            name: "Coca-Cola 2L",
-            description: "Refrigerante gelado",
-            price: 8.0,
-            categoryId: 2,
-            isAtivo: false,
-            imageUrl: "https://via.placeholder.com/150" // Exemplo
-        },
-        {
-            id: 3,
-            name: "Hambúrguer",
-            description: "Hambúrguer artesanal",
-            price: 22.5,
-            categoryId: 3,
-            isAtivo: true,
-            imageUrl: "https://via.placeholder.com/150" // Exemplo
-        },
-    ]);
+    const [products, setProducts] = useState<Product[]>([]);
 
-    const [categories] = useState<Category[]>([
-        { id: 1, name: "Pizza" },
-        { id: 2, name: "Bebida" },
-        { id: 3, name: "Lanche" },
-    ]);
+    async function fetchProducts(){
+        try {
+            const data = await getAllProducts()
+            console.log(data)
+            setProducts(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const [categories, setCategories] = useState<Category[]>([]);
+
+    async function fetchCategories(){
+        try {
+            const data = await getAllCategories()
+            console.log(data)
+            setCategories(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    useEffect(() => {
+        fetchProducts()
+        fetchCategories()
+    })
 
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 

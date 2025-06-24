@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../Components/Sidebar";
+import { getConfig } from "@/services/configService";
 
 export default function Config() {
     // Estados dos campos
@@ -21,6 +22,15 @@ export default function Config() {
 
     function limparNumero(valor:any) {
         return valor.replace(/\D/g, '');
+    }
+
+    async function fetchConfigs(){
+        try {
+            const data = await getConfig()
+            console.log(data)
+        } catch (error) {
+            console.error(error)
+        }
     }
 
     // Função para buscar dados do CNPJ

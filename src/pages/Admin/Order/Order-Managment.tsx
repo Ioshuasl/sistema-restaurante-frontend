@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { BadgeCheck, Clock, XCircle, Truck } from "lucide-react";
 import Sidebar from "../Components/Sidebar";
+import { getAllPedidos,updatePedido } from "@/services/pedidoService";
 
 type Order = {
     id: number;
@@ -14,33 +15,21 @@ export default function OrderManagment() {
     const [statusFilter, setStatusFilter] = useState<"todos" | "preparando" | "entrega" | "finalizado" | "cancelado">("todos");
     const [searchId, setSearchId] = useState("");
 
-    const [orders, setOrders] = useState<Order[]>([
-        {
-            id: 10,
-            clientName: "João Silva",
-            items: [
-                { name: "Pizza Calabresa", quantity: 1 },
-                { name: "Coca-Cola 2L", quantity: 1 },
-            ],
+    const [orders, setOrders] = useState<Order[]>([]);
 
-            total: 58.9,
-            status: "preparando",
-        },
-        {
-            id: 11,
-            clientName: "Maria Souza",
-            items: [{ name: "Lasanha", quantity: 2 }],
-            total: 42.0,
-            status: "finalizado",
-        },
-        {
-            id: 12,
-            clientName: "Carlos Oliveira",
-            items: [{ name: "Hambúrguer", quantity: 2 }],
-            total: 32.5,
-            status: "entrega",
-        },
-    ]);
+    async function fetchOrders(){
+        try {
+            const data = await getAllPedidos()
+            console.log(data)
+            setOrders(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    useEffect(() => {
+        fetchOrders()
+    },[])
 
     const handleStatusChange = (orderId: number, newStatus: Order["status"]) => {
         setOrders((prevOrders) =>

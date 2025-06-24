@@ -46,12 +46,14 @@ export interface NewUserPayload {
 export interface Category {
   id: number;
   nomeCategoriaProduto: string;
+  products: Product[];
 }
 
 //Interface representando o objeto de um Produto.
 export interface Product {
   id: number;
   nomeProduto: string;
+  image: string,
   valorProduto: string;
   isAtivo: boolean;
   categoriaProduto_id: number;

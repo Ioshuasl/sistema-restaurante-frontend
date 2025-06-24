@@ -1,37 +1,23 @@
-import axios, { type AxiosInstance, AxiosError } from 'axios';
-// Importando os tipos do arquivo de definição global.
-// O 'import type' é uma otimização do TypeScript.
-import type {
-  LoginCredentials,
-  LoginResponse,
-  User,
-  NewUserPayload,
-  Product,
-  NewProductPayload,
-  Category,
-  Pedido,
-  NewPedidoPayload,
-  Cargo,
-  FormaPagamento,
-  Config,
-} from '../types/interfaces-types'
+import axios from 'axios';
 
 // Instância axios
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3300/api';
 
-const api: AxiosInstance = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+
+
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  (error) => {
     let errorMessage = 'Ocorreu um erro de comunicação com o servidor.';
-
+    
     if (error.response?.data) {
       const errorData = error.response.data as any;
       // Pega a mensagem de erro específica do backend, se disponível.
@@ -47,6 +33,8 @@ api.interceptors.response.use(
   }
 );
 
+export default api
+/*
 export const apiService = {
 
   //congiura o token no cabeçalho da autorização para todas as requisições futuras
@@ -203,3 +191,4 @@ export const apiService = {
     },
   },
 };
+*/

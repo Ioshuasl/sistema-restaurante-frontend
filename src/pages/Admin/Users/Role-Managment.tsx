@@ -1,21 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../Components/Sidebar";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronsUpDown, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getAllCargos } from "@/services/cargoService";
 
 type Cargo = {
     id: number;
     name: string;
 };
 
-const initialCargos: Cargo[] = [
-    { id: 1, name: "colaborador" },
-    { id: 2, name: "administrador" },
-    { id: 3, name: "entregador" },
-];
-
 export default function RoleManagment() {
-    const [cargos, setCargos] = useState<Cargo[]>(initialCargos);
+    const [cargos, setCargos] = useState<Cargo[]>([]);
     const [filter, setFilter] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newCargoName, setNewCargoName] = useState("");
@@ -27,6 +22,21 @@ export default function RoleManagment() {
     const filteredCargos = cargos.filter((cargo) =>
         cargo.name.toLowerCase().includes(filter.toLowerCase())
     );
+
+
+    async function fetchCargos() {
+        try {
+            const data = await getAllCargos()
+            console.log(data)
+            setCargos(data)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    useEffect(() => {
+        fetchCargos()
+    }, [])
 
     const handleAddCargo = () => {
         if (!newCargoName.trim()) {
