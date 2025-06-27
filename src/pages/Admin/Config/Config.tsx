@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../Components/Sidebar";
-import { getConfig } from "@/services/configService";
+import { getConfig, updateConfig } from "@/services/configService";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { Loader2 } from "lucide-react";
 
 export default function Config() {
-    // Estados dos campos
+    // Estados dos campos (sem alterações)
     const [cnpj, setCnpj] = useState("");
     const [razaoSocial, setRazaoSocial] = useState("");
-    const [nomeFantasia, setNomeFantasia] = useState("")
+    const [nomeFantasia, setNomeFantasia] = useState("");
     const [cep, setCep] = useState("");
     const [tipoLogadouro, setTipoLogadouro] = useState("");
     const [logadouro, setLogadouro] = useState("");
@@ -20,44 +23,58 @@ export default function Config() {
     const [email, setEmail] = useState("");
     const [taxaEntrega, setTaxaEntrega] = useState("");
 
-    function limparNumero(valor:any) {
+    // ANÁLISE/MELHORIA 1: Adicionar estados de carregamento
+    const [isLoading, setIsLoading] = useState(true); // Para o carregamento inicial dos dados
+    const [isSubmitting, setIsSubmitting] = useState(false); // Para o envio do formulário
+
+    function limparNumero(valor: any) {
         return valor.replace(/\D/g, '');
     }
 
-    async function fetchConfigs(){
+    async function fetchConfig() {
         try {
-            const data = await getConfig()
-            console.log(data)
-        } catch (error) {
-            console.error(error)
+            setIsLoading(true);
+            const data = await getConfig();
+            // ... (preenchimento dos estados, mantido igual)
+            setRazaoSocial(data.razao_social || "");
+            setNomeFantasia(data.estabelecimento.nome_fantasia)
+            setCep(data.estabelecimento.cep)
+            setTipoLogadouro(data.estabelecimento.tipo_logradouro || "")
+            setLogadouro(data.estabelecimento.logradouro || "");
+            setNumero(data.estabelecimento.numero || "")
+            setBairro(data.estabelecimento.bairro || "");
+            setCidade(data.estabelecimento.cidade.nome || "");
+            setEstado(data.estabelecimento.estado.sigla || "");
+            setEmail(data.estabelecimento.email || "")
+            setTelefone(data.telefoneCompleto || "")
+            setTaxaEntrega(data.taxa_entrega || "")
+
+        } catch (error: any) {
+            toast.error("Erro ao carregar as configurações do sistema.");
+            console.error(error);
+        } finally {
+            setIsLoading(false);
         }
     }
 
-    // Função para buscar dados do CNPJ
+    useEffect(() => {
+        fetchConfig();
+    }, []);
+
     const handleBuscarCNPJ = async () => {
-
-        const cnpjFormatado = await limparNumero(cnpj)
-
+        const cnpjFormatado = limparNumero(cnpj);
         if (cnpjFormatado.length !== 14) {
-            alert("CNPJ inválido.");
+            toast.warn("CNPJ inválido.");
             return;
         }
-
         try {
-            const response = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjFormatado}`, {
-                method: 'GET',
-                headers: {
-                    "Accept": "*/*"
-                },
-            });
+            const response = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjFormatado}`);
             if (!response.ok) {
-                alert("Erro ao buscar o CNPJ. Verifique o número e tente novamente.");
+                toast.error("Erro ao buscar o CNPJ. Verifique o número e tente novamente.");
                 return;
             }
-
             const data = await response.json();
-            console.log(data)
-
+            // ... (preenchimento dos estados, mantido igual)
             setRazaoSocial(data.razao_social || "");
             setNomeFantasia(data.estabelecimento.nome_fantasia)
             setCep(data.estabelecimento.cep)
@@ -70,28 +87,23 @@ export default function Config() {
             setEmail(data.estabelecimento.email || "")
             let telefoneCompleto = data.estabelecimento.ddd1 + data.estabelecimento.telefone1
             setTelefone(telefoneCompleto || "")
-
         } catch (error) {
             console.error("Erro ao buscar CNPJ:", error);
-            alert("Ocorreu um erro ao buscar o CNPJ.");
+            toast.error("Ocorreu um erro ao buscar o CNPJ.");
         }
     };
 
-    // Função para buscar dados do CEP
     const handleBuscarCEP = async () => {
-
-        const cepFormatado = await limparNumero(cep)
-
+        const cepFormatado = limparNumero(cep);
         if (cepFormatado.length !== 8) {
-            alert("CEP inválido.");
+            toast.warn("CEP inválido.");
             return;
         }
-
         try {
             const response = await fetch(`https://viacep.com.br/ws/${cepFormatado}/json/`);
             const data = await response.json();
             if (data.erro) {
-                alert("CEP não encontrado.");
+                toast.error("CEP não encontrado.");
                 return;
             }
             setLogadouro(data.logradouro || "");
@@ -100,51 +112,61 @@ export default function Config() {
             setEstado(data.uf || "");
         } catch (error) {
             console.error("Erro ao buscar CEP:", error);
-            alert("Ocorreu um erro ao buscar o CEP.");
+            toast.error("Ocorreu um erro ao buscar o CEP.");
         }
     };
 
-    // Função para lidar com o envio do formulário
+    // Implementar a lógica de atualização
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
 
+        // Montar o objeto de dados para envio
         const dadosConfig = {
             cnpj,
-            razaoSocial,
-            nomeFantasia,
-            endereco: {
-                cep,
-                logadouro,
-                numero,
-                quadra,
-                lote,
-                bairro,
-                cidade,
-                estado,
-            },
-            contato: {
-                telefone,
-                email,
-            },
-            taxaEntrega,
+            razao_social: razaoSocial,
+            nome_fantasia: nomeFantasia,
+            cep,
+            tipo_logradouro: tipoLogadouro,
+            logradouro: logadouro,
+            numero,
+            quadra,
+            lote,
+            bairro,
+            cidade,
+            estado,
+            telefone,
+            email,
+            taxa_entrega: parseFloat(taxaEntrega) || 0,
         };
 
-        console.log("Dados enviados:", dadosConfig);
-
-        // Aqui você pode enviar os dados para o backend com fetch ou axios
-        // ...
+        try {
+            // Chama a função de serviço para atualizar
+            await updateConfig(dadosConfig);
+            toast.success("Configurações salvas com sucesso!");
+        } catch (error: any) {
+            toast.error(error.message || "Erro ao salvar as configurações.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex bg-gray-100">
             <title>Configurações do Sistema</title>
             <main className="flex flex-1 bg-gray-100">
                 <Sidebar />
-
                 <div className="flex flex-1 p-6">
                     <div className="flex flex-col flex-1 bg-white rounded-lg shadow-lg p-6 mx-auto">
                         <h1 className="text-2xl font-bold mb-4">Configurações do Sistema</h1>
-
                         <form onSubmit={handleSubmit}>
                             {/* Seção: Dados do Restaurante */}
                             <div className="mb-6">
@@ -281,20 +303,21 @@ export default function Config() {
                                     />
                                 </div>
                             </div>
-
-                            {/* Botão Salvar */}
                             <div className="flex justify-end">
                                 <button
                                     type="submit"
-                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
+                                    disabled={isSubmitting}
+                                    className={`flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    Salvar Alterações
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </main>
+            <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} />
         </div>
     );
 }
