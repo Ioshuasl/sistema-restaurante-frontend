@@ -82,12 +82,20 @@ export interface PedidoItemPayload {
 
 //Payload completo para a criação de um novo pedido.
 export interface NewPedidoPayload {
+  itensPedido: { produto_id: number; quantidade: number }[];
+  valorTotal: number;
+  clientName: string;
+  clientTelefone: string;
+  cepCliente: string;
+  logradouroCliente: string;
+  numeroLogradouroCliente: string;
+  bairroCliente: string;
+  cidadeCliente: string;
+  estadoCliente: string;
+  complementoEnderecoCliente: string;
   formaPagamento_id: number;
-  isRetiradaEstabelecimento: boolean;
-  nomeCliente: string;
-  enderecoCliente?: string;
-  produtosPedido: PedidoItemPayload[];
-}
+  retiradaLocal: boolean;
+};
 
 //Interface para um item de pedido quando retornado pela API.
 export interface PedidoItem {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // para redirecionar
 import ToggleSwitch from '../Components/ToggleSwitch';
 import Sidebar from '../Components/Sidebar';
+import { createProduct } from '@/services/productService';
 
 // Interface para categoria
 type Category = {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../Components/Sidebar";
+import { createCategory } from "@/services/categoryService";
 
 interface Category {
   id: number;

@@ -13,6 +13,11 @@ export async function getAllPedidos(){
   return response.data;
 }
 
+export async function getPedido(id:number){
+  const response = await api.get(`/pedido/${id}`);
+  return response.data;
+}
+
 //Busca pedidos filtrados por forma de pagamento. Requer auth de Admin.
 export async function getPedidosByFormaPagamento(formaPagamentoId: number){
     const response = await api.get(`/pedido/formaPagamento/${formaPagamentoId}`);
