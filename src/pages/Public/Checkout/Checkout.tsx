@@ -1,39 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp } from 'lucide-react'; // para o ícone toggle
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { buscarCEP } from '@/functions/buscarCEP';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Importando os estilos do Toastify
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
+// Importando os tipos centralizados
+import {
+  type Produto,
+  type Config,
+  type FormaPagamento,
+  type CreatePedidoPayload,
+  type ProdutoPedidoPayload
+} from "../../../types/interfaces-types";
 
-
-type Product = {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-};
-
+// Tipos do componente Checkout
 type CartItem = {
-  product: Product;
+  product: Produto;
   quantity: number;
-};
-
-type Order = {
-  itensPedido: CartItem[];
-  valorTotal: number;
-  clientName: string;
-  clientTelefone: string;
-  cepCliente: string;
-  logradouroCliente: string;
-  numeroLogradouroCliente: string;
-  bairroCliente: string,
-  cidadeCliente: string;
-  estadoCliente: string,
-  complementoEnderecoCliente: string,
-  formaPagamento_id: number;
-  retiradaLocal: boolean;
 };
 
 type Props = {
@@ -43,10 +27,11 @@ type Props = {
   onDecrease: (productId: number) => void;
 };
 
-type PaymentMethod = {
-  id: number;
-  name: string;
-};
+// Importando os serviços
+import { getConfig } from '../../../services/configService';
+import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
+import { createPedido } from '../../../services/pedidoService';
+
 
 export default function Checkout({
   cart,
@@ -65,36 +50,43 @@ export default function Checkout({
   const [complemento, setComplemento] = useState('')
   const [retiradaLocal, setRetiradaLocal] = useState(true);
   const [payment, setPayment] = useState<number | ''>('');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<FormaPagamento[]>([]);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [taxaEntrega, setTaxaEntrega] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
-  const taxaEntrega = 5.00;
-
   const totalProdutos = cart.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
+    (acc, item) => acc + item.product.valorProduto * item.quantity,
     0
   );
 
   const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + taxaEntrega;
 
-  // Simula busca das formas de pagamento
+  // Efeito para buscar a taxa de entrega e as formas de pagamento
   useEffect(() => {
-    const fetchPaymentMethods = async () => {
-      const methods: PaymentMethod[] = [
-        { id: 1, name: 'Dinheiro' },
-        { id: 2, name: 'Cartão' },
-        { id: 3, name: 'PIX' },
-        { id: 4, name: 'Boleto' }
-      ];
-      setPaymentMethods(methods);
+    const fetchData = async () => {
+      try {
+        const [config, methods] = await Promise.all([
+          getConfig(),
+          getAllFormasPagamento(),
+        ]);
+        setTaxaEntrega(config.taxaEntrega);
+        setPaymentMethods(methods);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar dados. Tente novamente.");
+      } finally {
+        setIsLoading(false);
+      }
     };
-
-    fetchPaymentMethods();
+    fetchData();
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // A validação do formulário permanece a mesma
     if (
       !name ||
       !telefone ||
@@ -105,32 +97,50 @@ export default function Checkout({
       !cidade ||
       !payment
     ) {
-      alert('Por favor, preencha todos os campos.');
+      toast.error('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
-    // Montar objeto Order
-    const order: Order = {
-      itensPedido: cart,
-      valorTotal,
-      clientName: name,
-      clientTelefone: telefone,
-      cepCliente: cep,
-      logradouroCliente: logradouro,
-      numeroLogradouroCliente: numero,
-      bairroCliente: bairro,
-      cidadeCliente: cidade,
-      estadoCliente: estado,
-      complementoEnderecoCliente:complemento,
-      formaPagamento_id: Number(payment),
-      retiradaLocal:true
-    };
+    setIsSubmitting(true);
 
-    console.log('Pedido a ser enviado:', order);
-    // Aqui você faria a chamada à API para enviar o pedido.
+    try {
+      // Mapear o carrinho para o formato esperado pela API
+      const produtosPedido: ProdutoPedidoPayload[] = cart.map(item => ({
+        produtoId: item.product.id,
+        quantidade: item.quantity
+      }));
 
-    onConfirm();
-    navigate('/pedido-confirmado');
+      // Montar o objeto de pedido (Payload)
+      const orderPayload: CreatePedidoPayload = {
+        produtosPedido: produtosPedido,
+        formaPagamento_id: Number(payment),
+        situacaoPedido: 'Pendente', // Status inicial
+        isRetiradaEstabelecimento: retiradaLocal,
+        nomeCliente: name,
+        telefoneCliente: telefone,
+        cepCliente: cep,
+        tipoLogadouroCliente: 'Não informado', // Pode ser ajustado com um campo no formulário
+        logadouroCliente: logradouro,
+        numeroCliente: numero,
+        quadraCliente: "", // Não há campo específico no formulário
+        loteCliente: "", // Não há campo específico no formulário
+        bairroCliente: bairro,
+        cidadeCliente: cidade,
+        estadoCliente: estado,
+      };
+
+      await createPedido(orderPayload);
+
+      toast.success('Pedido enviado com sucesso!');
+      onConfirm();
+      navigate('/pedido-confirmado');
+
+    } catch (error) {
+      console.error('Erro ao enviar pedido:', error);
+      toast.error('Erro ao enviar pedido. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBuscarCEP = async () => {
@@ -138,7 +148,15 @@ export default function Checkout({
     setLogradouro(data.logradouro || "");
     setBairro(data.bairro || "");
     setCidade(data.localidade || "");
-    setEstado(data.estado || "")
+    setEstado(data.uf || "") // A API do ViaCEP retorna 'uf'
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>Carregando...</p>
+      </div>
+    );
   }
 
   return (
@@ -166,11 +184,11 @@ export default function Checkout({
                   <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
                     <img
                       src={item.product.image}
-                      alt={item.product.name}
+                      alt={item.product.nomeProduto}
                       className="w-16 h-16 object-cover rounded"
                     />
                     <p className="font-medium text-gray-800">
-                      {item.product.name}
+                      {item.product.nomeProduto}
                     </p>
                     <div className="flex items-center gap-2 mt-1 sm:mt-0">
                       <button
@@ -189,7 +207,7 @@ export default function Checkout({
                     </div>
                   </div>
                   <p className="text-md font-semibold text-gray-700 whitespace-nowrap">
-                    R$ {(item.product.price * item.quantity).toFixed(2)}
+                    R$ {(item.product.valorProduto * item.quantity).toFixed(2)}
                   </p>
                 </li>
               ))}
@@ -345,7 +363,7 @@ export default function Checkout({
               <option value="">Selecione</option>
               {paymentMethods.map((method) => (
                 <option key={method.id} value={method.id}>
-                  {method.name}
+                  {method.nomeFormaPagamento}
                 </option>
               ))}
             </select>
@@ -403,9 +421,14 @@ export default function Checkout({
           </button>
           <button
             onClick={handleSubmit}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition"
+            disabled={isSubmitting}
+            className={`w-full py-2 rounded-lg font-semibold transition ${
+              isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
           >
-            Confirmar Pedido
+            {isSubmitting ? 'Enviando...' : 'Confirmar Pedido'}
           </button>
         </div>
       </div>

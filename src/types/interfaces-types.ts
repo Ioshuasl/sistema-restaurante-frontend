@@ -1,114 +1,75 @@
-//Interface para as credenciais enviadas no login.
-export interface LoginCredentials {
+// --- Autenticação e Usuário ---
+
+export interface LoginPayload {
   username: string;
   password: string;
 }
 
-
-//Interface para a resposta completa do endpoint de login.
-export interface LoginResponse {
+export interface AuthResponse {
   message: string;
   user: {
     id: number;
     nome: string;
     username: string;
+    cargo: string;
+    admin: boolean;
   };
   token: string;
 }
 
-//Interface para os dados de um Cargo.
-export interface Cargo {
-  id: number;
-  nome: string;
-  descricao?: string;
-}
-
-//Interface representando o objeto de um Usuário, como retornado pela API.
 export interface User {
   id: number;
   nome: string;
+  cargo_id: number;
   username: string;
-  cargoId: number;
-  Cargo?: Cargo; // O cargo pode ser incluído em algumas requisições
-  createdAt?: string;
-  updatedAt?: string;
+  password?: string; // A senha é opcional, pois não será retornada nas buscas
+  createdAt: string;
+  updatedAt: string;
+  Cargo: Cargo; // Relação com o tipo Cargo
 }
 
-//Payload para a criação de um novo usuário.
-export interface NewUserPayload {
+export interface CreateUserPayload {
   nome: string;
-  cargoId: number;
+  cargo_id: number;
   username: string;
-  password: string;
+  password?: string;
 }
 
-//Interface representando o objeto de uma Categoria de Produto.
-export interface Category {
+export interface UpdateUserPayload {
+  nome?: string;
+  cargo_id?: number;
+  username?: string;
+  password?: string;
+}
+
+
+// --- Cargo ---
+
+export interface Cargo {
   id: number;
-  nomeCategoriaProduto: string;
+  nome: string;
+  descricao: string;
+  admin: boolean;
+  createdAt: string;
+  updatedAt: string;
+  Users?: User[]; // Relação opcional com o tipo User
 }
 
-//Interface representando o objeto de um Produto.
-export interface Product {
-  id: number;
-  nomeProduto: string;
-  valorProduto: string;
-  isAtivo: boolean;
-  categoriaProduto_id: number;
-  CategoriaProduto?: Category; // A categoria pode ser incluída
+export interface CreateCargoPayload {
+  nome: string;
+  descricao: string;
+  admin: boolean;
 }
 
-//Payload para a criação de um novo produto.
-export interface NewProductPayload {
-  nomeProduto: string;
-  valorProduto: number;
-  isAtivo: boolean;
-  categoriaProduto_id: number;
+export interface UpdateCargoPayload {
+  nome?: string;
+  descricao?: string;
+  admin?: boolean;
 }
 
-//Interface representando uma Forma de Pagamento.
-export interface FormaPagamento {
-  id: number;
-  nomeFormaPagamento: string;
-}
 
-//Interface para um item individual dentro de um pedido ao ser criado.
-export interface PedidoItemPayload {
-  produtoId: number;
-  quantidade: number;
-}
+// --- Configuração ---
 
-//Payload completo para a criação de um novo pedido.
-export interface NewPedidoPayload {
-  formaPagamento_id: number;
-  isRetiradaEstabelecimento: boolean;
-  nomeCliente: string;
-  enderecoCliente?: string;
-  produtosPedido: PedidoItemPayload[];
-}
-
-//Interface para um item de pedido quando retornado pela API.
-export interface PedidoItem {
-    quantidade: number;
-    precoUnitario: string;
-    Produto: {
-        nomeProduto: string;
-    }
-}
-
-//Interface representando o objeto de um Pedido completo, como retornado pela API.
-export interface Pedido {
-    id: number;
-    valorTotalPedido: string;
-    isRetiradaEstabelecimento: boolean;
-    nomeCliente: string;
-    enderecoCliente?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    ItemPedidos?: PedidoItem[]; // Itens são incluídos na busca de pedidos
-}
-
-//Interface para o objeto de configuração do sistema.
 export interface Config {
   id: number;
   cnpj: string;
@@ -118,12 +79,185 @@ export interface Config {
   tipoLogadouro: string;
   logadouro: string;
   numero: string;
-  quadra?: string;
-  lote?: string;
+  quadra: string;
+  lote: string;
   bairro: string;
   cidade: string;
   estado: string;
   telefone: string;
   email: string;
-  taxaEntrega: string; // DECIMAL é retornado como string
+  taxaEntrega: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateConfigPayload {
+  cnpj?: string;
+  razaoSocial?: string;
+  nomeFantasia?: string;
+  cep?: string;
+  tipoLogadouro?: string;
+  logadouro?: string;
+  numero?: string;
+  quadra?: string;
+  lote?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  telefone?: string;
+  email?: string;
+  taxaEntrega?: number;
+}
+
+
+// --- Formas de Pagamento ---
+
+export interface FormaPagamento {
+  id: number;
+  nomeFormaPagamento: string;
+  createdAt: string;
+  updatedAt: string;
+  Pedidos?: Pedido[]; // Relação opcional com o tipo Pedido
+}
+
+export interface CreateFormaPagamentoPayload {
+  nomeFormaPagamento: string;
+}
+
+export interface UpdateFormaPagamentoPayload {
+  nomeFormaPagamento?: string;
+}
+
+
+// --- Produto e Categoria de Produto ---
+
+export interface CategoriaProduto {
+  id: number;
+  nomeCategoriaProduto: string;
+  createdAt: string;
+  updatedAt: string;
+  Produtos?: Produto[]; // Relação opcional com o tipo Produto
+}
+
+export interface CreateCategoriaProdutoPayload {
+  nomeCategoriaProduto: string;
+}
+
+export interface UpdateCategoriaProdutoPayload {
+  nomeCategoriaProduto?: string;
+}
+
+export interface Produto {
+  id: number;
+  nomeProduto: string;
+  valorProduto: number;
+  image: string;
+  isAtivo: boolean;
+  categoriaProduto_id: number;
+  createdAt: string;
+  updatedAt: string;
+  CategoriaProduto?: CategoriaProduto; // Relação opcional com o tipo CategoriaProduto
+  ItemPedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
+}
+
+export interface CreateProdutoPayload {
+  nomeProduto: string;
+  valorProduto: number;
+  image: string;
+  isAtivo: boolean;
+  categoriaProduto_id: number;
+}
+
+export interface UpdateProdutoPayload {
+  nomeProduto?: string;
+  valorProduto?: number;
+  image?: string;
+  isAtivo?: boolean;
+  categoriaProduto_id?: number;
+}
+
+
+// --- Pedido e Itens de Pedido ---
+
+export interface Pedido {
+  id: number;
+  formaPagamento_id: number;
+  isRetiradaEstabelecimento: boolean;
+  situacaoPedido: string;
+  nomeCliente: string;
+  telefoneCliente: string;
+  cepCliente: string;
+  tipoLogadouroCliente: string;
+  logadouroCliente: string;
+  numeroCliente: string;
+  quadraCliente: string;
+  loteCliente: string;
+  bairroCliente: string;
+  cidadeCliente: string;
+  estadoCliente: string;
+  valorTotalPedido: number;
+  createdAt: string;
+  updatedAt: string;
+  FormaPagamento?: FormaPagamento; // Relação opcional com o tipo FormaPagamento
+  ItemPedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
+}
+
+export interface ItemPedido {
+  id: number;
+  pedidoId: number;
+  produtoId: number;
+  quantidade: number;
+  precoUnitario: number;
+  createdAt: string;
+  updatedAt: string;
+  Produto?: Produto; // Relação opcional com o tipo Produto
+}
+
+export interface ProdutoPedidoPayload {
+  produtoId: number;
+  quantidade: number;
+}
+
+export interface CreatePedidoPayload {
+  produtosPedido: ProdutoPedidoPayload[];
+  formaPagamento_id: number;
+  situacaoPedido: string;
+  isRetiradaEstabelecimento: boolean;
+  nomeCliente: string;
+  telefoneCliente: string;
+  cepCliente: string;
+  tipoLogadouroCliente: string;
+  logadouroCliente: string;
+  numeroCliente: string;
+  quadraCliente: string;
+  loteCliente: string;
+  bairroCliente: string;
+  cidadeCliente: string;
+  estadoCliente: string;
+}
+
+export interface UpdatePedidoPayload {
+  formaPagamento_id?: number;
+  isRetiradaEstabelecimento?: boolean;
+  situacaoPedido?: string;
+  nomeCliente?: string;
+  telefoneCliente?: string;
+  cepCliente?: string;
+  tipoLogadouroCliente?: string;
+  logadouroCliente?: string;
+  numeroCliente?: string;
+  quadraCliente?: string;
+  loteCliente?: string;
+  bairroCliente?: string;
+  cidadeCliente?: string;
+  estadoCliente?: string;
+  valorTotalPedido?: number;
+}
+
+
+// --- Menu ---
+
+// A interface do menu é geralmente uma categoria de produto com seus produtos inclusos
+export interface Menu extends CategoriaProduto {
+  produtos: Produto[];
 }

@@ -1,98 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getMenu } from '../../../services/menuService'; // Importando a função de serviço
+import { type Menu, type Produto } from '../../../types/interfaces-types'; // Importando os tipos
 
-type Product = {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-};
-
-type Category = {
-  id: number
-  name: string;
-  products: Product[];
-};
-
-type CartItem = {
-  product: Product;
-  quantity: number;
-};
+// O componente agora lida com o estado do menu, carregamento e erros
 
 type CardapioProps = {
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
 };
 
-const menu: Category[] = [
-  {
-    id:1,
-    name: 'Lanches',
-    products: [
-      {
-        id: 1,
-        name: 'X-Burger',
-        description: 'Pão, hambúrguer, queijo, alface e tomate.',
-        price: 15.9,
-        image: 'https://via.placeholder.com/150',
-      },
-      {
-        id: 2,
-        name: 'X-Bacon',
-        description: 'Pão, hambúrguer, bacon, queijo e alface.',
-        price: 18.9,
-        image: 'https://via.placeholder.com/150',
-      },
-    ],
-  },
-  {
-    id:2,
-    name: 'Bebidas',
-    products: [
-      {
-        id: 3,
-        name: 'Refrigerante Lata',
-        description: '350ml - Coca, Pepsi ou Guaraná',
-        price: 6.0,
-        image: 'https://via.placeholder.com/150',
-      },
-      {
-        id: 4,
-        name: 'Suco Natural',
-        description: 'Laranja, Limão ou Abacaxi',
-        price: 7.5,
-        image: 'https://via.placeholder.com/150',
-      },
-    ],
-  },
-  {
-    id:3,
-    name: 'Sobremesas',
-    products: [
-      {
-        id: 5,
-        name: 'Petit Gateau',
-        description: 'Bolo de chocolate quente com brigadeiro',
-        price: 12.0,
-        image: 'https://via.placeholder.com/150',
-      },
-      {
-        id: 6,
-        name: 'Milk shake de morango',
-        description: 'Hmmmmmm.. é muito cremoso',
-        price: 10.5,
-        image: 'https://via.placeholder.com/150',
-      },
-    ],
-  },
-];
+type CartItem = {
+  product: Produto; // Usando o tipo Produto da API
+  quantity: number;
+};
 
 export default function Cardapio({ cart, setCart }: CardapioProps) {
+  const [menu, setMenu] = useState<Menu[]>([]); // Estado para armazenar o menu da API
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const navigate = useNavigate();
 
-  const addToCart = (product: Product) => {
+  // useEffect para buscar os dados do menu quando o componente é montado
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const menuData = await getMenu();
+        setMenu(menuData);
+      } catch (err) {
+        console.error("Erro ao buscar o menu:", err);
+        setError("Não foi possível carregar o cardápio. Tente novamente mais tarde.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMenu();
+  }, []); // O array de dependências vazio garante que a busca ocorra apenas uma vez
+
+  const addToCart = (product: Produto) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.product.id === product.id);
       if (existingItem) {
@@ -119,9 +65,25 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
   };
 
   const cartTotal = cart.reduce(
-    (total, item) => total + item.product.price * item.quantity,
+    (total, item) => total + item.product.valorProduto * item.quantity,
     0
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <p className="text-xl text-gray-700">Carregando cardápio...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <p className="text-xl text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
@@ -134,14 +96,14 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
 
       {/* NAVBAR */}
       <nav className="bg-white shadow-md sticky top-0 z-30 border-b border-gray-200">
-        <ul className="flex justify-center gap-6 py-4 font-medium text-gray-700">
+        <ul className="flex justify-center gap-6 py-4 font-medium text-gray-700 overflow-x-auto whitespace-nowrap">
           {menu.map((category) => (
             <li key={category.id}>
               <a
-                href={`#${category.name}`}
+                href={`#${category.nomeCategoriaProduto}`}
                 className="hover:text-red-600 transition duration-200"
               >
-                {category.name}
+                {category.nomeCategoriaProduto}
               </a>
             </li>
           ))}
@@ -161,26 +123,29 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         )}
 
         {/* LISTAGEM DE CATEGORIAS */}
-        {menu.map((category, index) => (
-          <section key={index} id={category.name} className="mb-16 scroll-mt-32">
+        {menu.map((category) => (
+          <section key={category.id} id={category.nomeCategoriaProduto} className="mb-16 scroll-mt-32">
             <h2 className="text-2xl font-bold mb-6 text-red-600 border-b pb-2">
-              {category.name}
+              {category.nomeCategoriaProduto}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {category.products.map((product) => (
+              {category.produtos.map((product) => (
                 <div
                   key={product.id}
                   className="bg-white rounded-2xl shadow-md p-5 flex flex-col items-center text-center hover:shadow-xl transition"
                 >
                   <img
                     src={product.image}
-                    alt={product.name}
+                    alt={product.nomeProduto}
                     className="w-32 h-32 object-cover rounded-xl mb-3"
                   />
-                  <h3 className="text-lg font-semibold">{product.name}</h3>
-                  <p className="text-gray-500 text-sm mt-1">{product.description}</p>
+                  <h3 className="text-lg font-semibold">{product.nomeProduto}</h3>
+                  {/* A descrição não está no seu tipo de Produto, mas você pode adicionar se precisar */}
+                  <p className="text-gray-500 text-sm mt-1">
+                    {/* Exemplo de descrição do produto, se disponível */}
+                  </p>
                   <p className="text-red-600 font-bold text-lg mt-2">
-                    R$ {product.price.toFixed(2)}
+                    R$ {product.valorProduto}
                   </p>
                   <button
                     onClick={() => addToCart(product)}
@@ -222,25 +187,27 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                 >
                   <img
                     src={item.product.image}
-                    alt={item.product.name}
+                    alt={item.product.nomeProduto}
                     className="w-16 h-16 object-cover rounded-md"
                   />
                   <div className="flex-1">
-                    <h3 className="font-medium">{item.product.name}</h3>
+                    <h3 className="font-medium">{item.product.nomeProduto}</h3>
                     <p className="text-sm text-gray-500">
-                      R$ {(item.product.price * item.quantity).toFixed(2)}
+                      R$ {(item.product.valorProduto * item.quantity).toFixed(2)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => removeFromCart(item.product.id)}
-                      className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"                    >
+                      className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"
+                    >
                       −
                     </button>
                     <span className="px-2">{item.quantity}</span>
                     <button
                       onClick={() => addToCart(item.product)}
-                      className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"                      >
+                      className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"
+                    >
                       +
                     </button>
                   </div>

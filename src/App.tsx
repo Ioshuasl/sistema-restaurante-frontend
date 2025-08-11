@@ -17,18 +17,11 @@ import ProductCategoryManagment from "./pages/Admin/Product-Category/Product-Cat
 import Config from "./pages/Admin/Config/Config";
 import RoleManagment from "./pages/Admin/Users/Role-Managment";
 import PaymentMethod from "./pages/Admin/Payment-Method/Payment-Method";
+import { type Produto } from './types/interfaces-types';
 
-
-type Product = {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-};
-
+// Tipo CartItem agora usa o tipo Produto vindo da sua API
 type CartItem = {
-  product: Product;
+  product: Produto;
   quantity: number;
 };
 
@@ -65,7 +58,7 @@ export default function App() {
   };
 
   return (
-    
+
     <Routes>
       <Route
         path="/"
