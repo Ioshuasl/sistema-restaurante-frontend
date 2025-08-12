@@ -13,7 +13,7 @@ export const createCargo = async (payload: CreateCargoPayload): Promise<Cargo> =
 
 export const getCargos = async (): Promise<Cargo[]> => {
   const response = await api.get('/cargo');
-  return response.data;
+  return response.data.rows;
 };
 
 export const getCargoById = async (id: number): Promise<Cargo> => {

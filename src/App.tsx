@@ -104,7 +104,7 @@ export default function App() {
         element = {<NewProductCategory/>}
       />
       <Route
-        path="/admin/category-product/consult"
+        path="/admin/category-product/"
         element = {<ProductCategoryManagment/>}
       />
       <Route

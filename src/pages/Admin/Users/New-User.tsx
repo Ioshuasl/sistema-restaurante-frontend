@@ -1,75 +1,83 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
 import { useNavigate } from "react-router-dom";
-import ToggleSwitch from "../Components/ToggleSwitch";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-type Cargo = {
-    id: number;
-    name: string;
-};
-
-type User = {
-    name: string;
-    cpf: string;
-    cargoId: number;
-    isAdmin: boolean;
-    login: string;
-    password: string;
-};
-
-const cargos: Cargo[] = [
-    { id: 1, name: "colaborador" },
-    { id: 2, name: "administrador" },
-    { id: 3, name: "entregador" },
-];
+import { getCargos } from '../../../services/cargoService';
+import { createUser } from '../../../services/userService';
+import { type Cargo, type CreateUserPayload } from '../../../types/interfaces-types';
 
 export default function NewUser() {
-    const [name, setName] = useState("")
-    const [cpf, setCpf] = useState("")
-    const [cargoId, setCargoId] = useState("")
-    const [isAdmin, setIsAdmin] = useState(false)
-    const [login, setLogin] = useState("")
+    const [nome, setNome] = useState("")
+    const [cargo_id, setCargo_id] = useState("")
+    const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
 
-    const navigate = useNavigate()
+    const [cargos, setCargos] = useState<Cargo[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const navigate = useNavigate();
+
+    // Efeito para buscar os cargos do backend
+    useEffect(() => {
+        const fetchCargos = async () => {
+            try {
+                const cargosData = await getCargos();
+                setCargos(cargosData);
+            } catch (err) {
+                console.error("Erro ao buscar cargos:", err);
+                toast.error("Não foi possível carregar os cargos.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchCargos();
+    }, []);
 
     const handleSubmit = async () => {
-        console.log(name)
-        console.log(cpf)
-        console.log(cargoId)
-        console.log(isAdmin)
-        console.log(login)
-        console.log(password)
-
-        if (!name || !cpf || !cargoId || !login || !password) {
-            alert('Preencha todos os campos!');
+        if (!nome || !cargo_id || !username || !password) {
+            toast.error('Preencha todos os campos obrigatórios!');
             return;
         }
-
-
-        const newUser: User = {
-            name,
-            cpf,
-            cargoId: parseInt(cargoId),
-            isAdmin,
-            login,
+        
+        setIsSubmitting(true);
+        const newUserPayload: CreateUserPayload = {
+            nome,
+            cargo_id: parseInt(cargo_id),
+            username,
             password
-        }
+        };
 
-        console.log("Novo usuário cadastrado:", newUser);
-        // Aqui você pode chamar a função para salvar no backend ou atualizar o contexto
-        alert(`Usuário "${newUser.name}" cadastrado com sucesso!`);
-        navigate("/admin/user/consult")
+        try {
+            await createUser(newUserPayload);
+            toast.success(`Usuário "${nome}" cadastrado com sucesso!`);
+            navigate("/admin/user/consult");
+        } catch (error) {
+            console.error("Erro ao cadastrar usuário:", error);
+            toast.error("Erro ao cadastrar o usuário. Tente novamente.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCancel = () => {
-        confirm("deseja realmente cancelar o cadastro do usuário?")
-        navigate("/admin/user/consult")
+        if (window.confirm("Deseja realmente cancelar o cadastro do usuário?")) {
+            navigate("/admin/user/consult");
+        }
     }
 
 
-    return (
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-gray-600">Carregando cargos...</p>
+            </div>
+        );
+    }
 
+    return (
         <div className="min-h-screen flex bg-gray-100">
             <title>Gerenciamento de Usuáro</title>
             <main className="flex flex-1 bg-gray-100">
@@ -77,24 +85,14 @@ export default function NewUser() {
 
                 <div className="flex flex-col flex-1 bg-white rounded-lg shadow-lg p-6">
                     <h1 className="text-2xl font-bold mb-4">Cadastro de Usuário</h1>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <div>
                                 <label className="block mb-1 font-medium">Nome:</label>
                                 <input
                                     type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block mb-1 font-medium">CPF:</label>
-                                <input
-                                    type="text"
-                                    value={cpf}
-                                    onChange={(e) => setCpf(e.target.value)}
+                                    value={nome}
+                                    onChange={(e) => setNome(e.target.value)}
                                     className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     required
                                 />
@@ -102,33 +100,27 @@ export default function NewUser() {
                             <div>
                                 <label className="block mb-1 font-medium">Cargo:</label>
                                 <select
-                                    value={cargoId}
-                                    onChange={(e) => setCargoId(e.target.value)}
+                                    value={cargo_id}
+                                    onChange={(e) => setCargo_id(e.target.value)}
                                     className="w-full border border-gray-300 rounded-md px-3 py-2"
                                 >
+                                    <option value="">Selecione um Cargo</option>
                                     {cargos.map((cargo) => (
                                         <option key={cargo.id} value={cargo.id}>
-                                            {cargo.name}
+                                            {cargo.nome}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                         </div>
-                        <div className="flex items-center space-x-2">
 
-                            <label className="block mb-1 font-medium">Aministrador:</label>
-                            <ToggleSwitch
-                                checked={isAdmin}
-                                onChange={() => setIsAdmin(!isAdmin)}
-                            />
-                        </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div>
                                 <label className="block mb-1 font-medium">Login:</label>
                                 <input
                                     type="text"
-                                    value={login}
-                                    onChange={(e) => setLogin(e.target.value)}
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
                                     className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     required
                                 />
@@ -155,14 +147,16 @@ export default function NewUser() {
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className="w-32 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
+                                disabled={isSubmitting}
+                                className={`w-32 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                Cadastrar
+                                {isSubmitting ? "Cadastrando..." : "Cadastrar"}
                             </button>
                         </div>
                     </form>
                 </div>
             </main>
+            <ToastContainer />
         </div>
     );
 }

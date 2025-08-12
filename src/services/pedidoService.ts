@@ -8,6 +8,11 @@ export const createPedido = async (payload: CreatePedidoPayload): Promise<Pedido
 
 export const getAllPedidos = async (): Promise<Pedido[]> => {
   const response = await api.get('/pedido');
+  return response.data.rows;
+};
+
+export const countAllPedidos = async (): Promise<Pedido[]> => {
+  const response = await api.get('/pedido/count');
   return response.data;
 };
 

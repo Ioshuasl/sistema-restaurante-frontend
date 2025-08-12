@@ -1,117 +1,152 @@
-import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 import Sidebar from "../Components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import ToggleSwitch from "../Components/ToggleSwitch";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-type Cargo = {
-    id: number;
-    name: string;
-};
-
-type User = {
-    id: number;
-    name: string;
-    cpf: string;
-    cargoId: number;
-    isAdmin: boolean;
-    login: string;
-    password: string;
-};
-
-const cargos: Cargo[] = [
-    { id: 1, name: "colaborador" },
-    { id: 2, name: "administrador" },
-    { id: 3, name: "entregador" },
-];
-
-const usersData: User[] = [
-    {
-        id: 1,
-        name: "felipe",
-        cpf: "111.222.333-12",
-        cargoId: 1,
-        isAdmin: false,
-        login: "felipe",
-        password: "123456",
-    },
-    {
-        id: 2,
-        name: "alexandre",
-        cpf: "222.333.444-23",
-        cargoId: 2,
-        isAdmin: true,
-        login: "alexandre",
-        password: "123456",
-    },
-    {
-        id: 3,
-        name: "tatiany",
-        cpf: "333.444.555-34",
-        cargoId: 3,
-        isAdmin: false,
-        login: "tatiany",
-        password: "123456",
-    },
-];
+import { type User, type Cargo, type UpdateUserPayload } from '../../../types/interfaces-types';
+import { getUsers, updateUser, deleteUser } from '../../../services/userService';
+import { getCargos } from '../../../services/cargoService';
 
 export default function UserManagment() {
-    const [users, setUsers] = useState<User[]>(usersData);
+    const [users, setUsers] = useState<User[]>([]);
+    const [cargos, setCargos] = useState<Cargo[]>([]);
     const [searchName, setSearchName] = useState("");
-    const [searchCpf, setSearchCpf] = useState("");
     const [selectedCargo, setSelectedCargo] = useState<number | "">("");
-    const [adminFilter, setAdminFilter] = useState<"all" | "admin" | "notAdmin">(
-        "all"
-    );
 
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [editedUser, setEditedUser] = useState<User | null>(null);
+    const [editedNome, setEditedNome] = useState("");
+    const [editedUsername, setEditedUsername] = useState("");
+    const [editedCargoId, setEditedCargoId] = useState<number | ''>('');
+    const [newPassword, setNewPassword] = useState("");
+    
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const navigate = useNavigate();
+    
+    // CORREÇÃO: Pega o ID do usuário diretamente do localStorage, sem decodificar o token
+    const userString = localStorage.getItem('user');
+    let loggedInUserId: number | null = null;
+    if (userString) {
+        try {
+            const userObject = JSON.parse(userString);
+            loggedInUserId = userObject.id;
+        } catch (error) {
+            console.error("Erro ao fazer parse do usuário do localStorage:", error);
+        }
+    }
 
-    const handleEditClick = (user: User) => {
-        setEditingUser(user);
-        setEditedUser({ ...user });
-    };
-
-    const handleDeleteClick = (id: number) => {
-        if (confirm("Tem certeza que deseja excluir este usuário?")) {
-            setUsers((prev) => prev.filter((u) => u.id !== id));
+    const fetchUsersAndCargos = async () => {
+        try {
+            setIsLoading(true);
+            const [usersData, cargosData] = await Promise.all([
+                getUsers(),
+                getCargos(),
+            ]);
+            setUsers(usersData);
+            setCargos(cargosData);
+        } catch (err) {
+            console.error("Erro ao buscar dados:", err);
+            setError("Não foi possível carregar os dados.");
+            toast.error("Erro ao carregar dados.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleSaveEdit = () => {
-        if (editedUser) {
-            setUsers((prev) =>
-                prev.map((u) => (u.id === editedUser.id ? editedUser : u))
-            );
+    useEffect(() => {
+        fetchUsersAndCargos();
+    }, []);
+
+    const handleEditClick = (user: User) => {
+        setEditingUser(user);
+        setEditedNome(user.nome);
+        setEditedUsername(user.username);
+        setEditedCargoId(user.cargo_id);
+        setNewPassword(''); // Reseta a senha ao abrir o modal
+    };
+
+    const handleDeleteClick = async (id: number) => {
+        // CORREÇÃO: Usa o loggedInUserId obtido do localStorage
+        if (id === loggedInUserId) {
+            toast.error("Você não pode excluir sua própria conta.");
+            return;
+        }
+
+        if (window.confirm("Tem certeza que deseja excluir este usuário?")) {
+            try {
+                await deleteUser(id);
+                toast.success("Usuário excluído com sucesso.");
+                fetchUsersAndCargos();
+            } catch (err) {
+                console.error("Erro ao excluir usuário:", err);
+                toast.error("Erro ao excluir o usuário.");
+            }
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingUser) return;
+        setIsSubmitting(true);
+        
+        const payload: UpdateUserPayload = {
+            nome: editedNome,
+            username: editedUsername,
+            cargo_id: Number(editedCargoId),
+        };
+        
+        if (newPassword) {
+            payload.password = newPassword;
+        }
+
+        try {
+            await updateUser(editingUser.id, payload);
+            toast.success("Usuário atualizado com sucesso.");
             setEditingUser(null);
-            setEditedUser(null);
+            fetchUsersAndCargos();
+        } catch (err) {
+            console.error("Erro ao salvar edição:", err);
+            toast.error("Erro ao salvar as alterações.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const getCargoName = (id: number) =>
-        cargos.find((cargo) => cargo.id === id)?.name || "Desconhecido";
+        cargos.find((cargo) => cargo.id === id)?.nome || "Desconhecido";
 
     const filteredUsers = users.filter((user) => {
-        const nameMatch = user.name
+        const nameMatch = user.nome
             .toLowerCase()
             .includes(searchName.toLowerCase());
-        const cpfMatch = user.cpf.includes(searchCpf);
         const cargoMatch =
-            selectedCargo === "" ? true : user.cargoId === selectedCargo;
-        const adminMatch =
-            adminFilter === "all"
-                ? true
-                : adminFilter === "admin"
-                    ? user.isAdmin
-                    : !user.isAdmin;
-        return nameMatch && cpfMatch && cargoMatch && adminMatch;
+            selectedCargo === "" ? true : user.cargo_id === selectedCargo;
+        return nameMatch && cargoMatch;
     });
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-gray-600">Carregando usuários...</p>
+            </div>
+        );
+    }
+    
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-red-600">{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex bg-gray-100">
-            <title>Gerenciamento de Usuáro</title>
+            <title>Gerenciamento de Usuáros</title>
             <main className="flex flex-1">
                 <Sidebar />
 
@@ -131,16 +166,6 @@ export default function UserManagment() {
                             />
                         </div>
                         <div className="flex flex-col flex-1">
-                            <label className="text-sm font-medium mb-1">Filtrar por CPF</label>
-                            <input
-                                type="text"
-                                placeholder="CPF"
-                                value={searchCpf}
-                                onChange={(e) => setSearchCpf(e.target.value)}
-                                className="border border-gray-300 rounded-md px-3 py-2"
-                            />
-                        </div>
-                        <div className="flex flex-col flex-1">
                             <label className="text-sm font-medium mb-1">Filtrar por Cargo</label>
                             <select
                                 value={selectedCargo}
@@ -154,25 +179,9 @@ export default function UserManagment() {
                                 <option value="">Todos</option>
                                 {cargos.map((cargo) => (
                                     <option key={cargo.id} value={cargo.id}>
-                                        {cargo.name}
+                                        {cargo.nome}
                                     </option>
                                 ))}
-                            </select>
-                        </div>
-                        <div className="flex flex-col flex-1">
-                            <label className="text-sm font-medium mb-1">
-                                Tipo de Usuário
-                            </label>
-                            <select
-                                value={adminFilter}
-                                onChange={(e) =>
-                                    setAdminFilter(e.target.value as "all" | "admin" | "notAdmin")
-                                }
-                                className="border border-gray-300 rounded-md px-3 py-2"
-                            >
-                                <option value="all">Todos</option>
-                                <option value="admin">Administradores</option>
-                                <option value="notAdmin">Não-Administradores</option>
                             </select>
                         </div>
                     </div>
@@ -186,132 +195,105 @@ export default function UserManagment() {
 
                     {/* Listagem de usuários */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredUsers.map((user) => (
-                            <div
-                                key={user.id}
-                                className="border border-gray-300 rounded-md p-4 flex flex-col gap-2"
-                            >
-                                <span className="font-semibold">{user.name.charAt(0).toUpperCase() + user.name.slice(1)}</span>
-                                <span className="text-gray-600 text-sm">CPF: {user.cpf}</span>
-                                <span className="text-gray-600 text-sm">
-                                    Cargo: {getCargoName(user.cargoId)}
-                                </span>
-                                <span className="text-gray-600 text-sm">
-                                    Administrador: {user.isAdmin ? "Sim" : "Não"}
-                                </span>
-                                <div className="flex gap-2 mt-2">
-                                    <button
-                                        onClick={() => handleEditClick(user)}
-                                        className="p-2 rounded hover:bg-gray-100"
-                                        title="Editar"
-                                    >
-                                        <Pencil className="w-5 h-5 text-gray-600" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(user.id)}
-                                        className="p-2 rounded hover:bg-gray-100"
-                                        title="Excluir"
-                                    >
-                                        <Trash2 className="w-5 h-5 text-red-600" />
-                                    </button>
+                        {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                                <div
+                                    key={user.id}
+                                    className="border border-gray-300 rounded-md p-4 flex flex-col gap-2"
+                                >
+                                    <span className="font-semibold">{user.nome.charAt(0).toUpperCase() + user.nome.slice(1)}</span>
+                                    <span className="text-gray-600 text-sm">
+                                        Cargo: {getCargoName(user.cargo_id)}
+                                    </span>
+                                    <span className="text-gray-600 text-sm">
+                                        Administrador: {user.Cargo.admin ? "Sim" : "Não"}
+                                    </span>
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            onClick={() => handleEditClick(user)}
+                                            className="p-2 rounded hover:bg-gray-100"
+                                            title="Editar"
+                                        >
+                                            <Pencil className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteClick(user.id)}
+                                            className="p-2 rounded hover:bg-gray-100"
+                                            title="Excluir"
+                                        >
+                                            <Trash2 className="w-5 h-5 text-red-600" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-gray-500">Nenhum usuário encontrado.</p>
+                        )}
                     </div>
 
                     {/* Modal de Edição */}
-                    {editingUser && editedUser && (
-                        <div className="fixed inset-0 bg-[rgba(0,0,0,0.50)] flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-100 md:max-w-auto overflow-y-auto max-h-[90vh]">
-                                <h2 className="text-xl font-semibold mb-4">Editar Usuário</h2>
+                    {editingUser && (
+                        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold">Editar Usuário</h2>
+                                    <button onClick={() => setEditingUser(null)}>
+                                        <X size={20} className="text-gray-500 hover:text-gray-700" />
+                                    </button>
+                                </div>
                                 <div className="mb-4">
                                     <label className="block mb-1 font-medium">Nome</label>
                                     <input
                                         type="text"
-                                        value={editedUser.name}
-                                        onChange={(e) =>
-                                            setEditedUser({ ...editedUser, name: e.target.value })
-                                        }
+                                        value={editedNome}
+                                        onChange={(e) => setEditedNome(e.target.value)}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     />
                                 </div>
                                 <div className="mb-4">
-                                    <label className="block mb-1 font-medium">CPF</label>
+                                    <label className="block mb-1 font-medium">Username</label>
                                     <input
                                         type="text"
-                                        value={editedUser.cpf}
-                                        onChange={(e) =>
-                                            setEditedUser({ ...editedUser, cpf: e.target.value })
-                                        }
+                                        value={editedUsername}
+                                        onChange={(e) => setEditedUsername(e.target.value)}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     />
                                 </div>
                                 <div className="mb-4">
                                     <label className="block mb-1 font-medium">Cargo</label>
                                     <select
-                                        value={editedUser.cargoId}
-                                        onChange={(e) =>
-                                            setEditedUser({
-                                                ...editedUser,
-                                                cargoId: Number(e.target.value),
-                                            })
-                                        }
+                                        value={editedCargoId}
+                                        onChange={(e) => setEditedCargoId(Number(e.target.value))}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     >
+                                        <option value="">Selecione um Cargo</option>
                                         {cargos.map((cargo) => (
                                             <option key={cargo.id} value={cargo.id}>
-                                                {cargo.name}
+                                                {cargo.nome}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <label className="block mb-1 font-medium">Aministrador:</label>
-                                    <ToggleSwitch
-                                        checked={editedUser.isAdmin}
-                                        onChange={() =>
-                                            setEditedUser({
-                                                ...editedUser,
-                                                isAdmin: !editedUser.isAdmin,
-                                            })
-                                        }
-                                    />
-                                </div>
                                 <div className="mb-4">
-                                    <label className="block mb-1 font-medium">Login</label>
+                                    <label className="block mb-1 font-medium">Nova Senha (opcional)</label>
                                     <input
-                                        type="text"
-                                        value={editedUser.login}
-                                        onChange={(e) =>
-                                            setEditedUser({ ...editedUser, login: e.target.value })
-                                        }
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                    />
-                                </div>
-                                <div className="mb-4">
-                                    <label className="block mb-1 font-medium">Senha</label>
-                                    <input
-                                        type="text"
-                                        value={editedUser.password}
-                                        onChange={(e) =>
-                                            setEditedUser({ ...editedUser, password: e.target.value })
-                                        }
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
                                         className="w-full border border-gray-300 rounded-md px-3 py-2"
                                     />
                                 </div>
                                 <div className="flex justify-end gap-2">
                                     <button
-                                        onClick={() => {
-                                            setEditingUser(null);
-                                            setEditedUser(null);
-                                        }}
+                                        onClick={() => setEditingUser(null)}
                                         className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         onClick={handleSaveEdit}
-                                        className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                                        disabled={isSubmitting}
+                                        className={`px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         Salvar
                                     </button>
@@ -321,6 +303,7 @@ export default function UserManagment() {
                     )}
                 </div>
             </main>
+            <ToastContainer />
         </div>
     );
 }

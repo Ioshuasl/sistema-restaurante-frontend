@@ -178,12 +178,13 @@ export interface UpdateProdutoPayload {
 
 
 // --- Pedido e Itens de Pedido ---
+type situacaoPedido = 'preparando'|'entrega'|'finalizado'|'cancelado'
 
 export interface Pedido {
   id: number;
   formaPagamento_id: number;
   isRetiradaEstabelecimento: boolean;
-  situacaoPedido: string;
+  situacaoPedido: situacaoPedido;
   nomeCliente: string;
   telefoneCliente: string;
   cepCliente: string;
@@ -199,7 +200,7 @@ export interface Pedido {
   createdAt: string;
   updatedAt: string;
   FormaPagamento?: FormaPagamento; // Relação opcional com o tipo FormaPagamento
-  ItemPedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
+  itenspedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
 }
 
 export interface ItemPedido {
@@ -210,7 +211,7 @@ export interface ItemPedido {
   precoUnitario: number;
   createdAt: string;
   updatedAt: string;
-  Produto?: Produto; // Relação opcional com o tipo Produto
+  produto?: Produto; // Relação opcional com o tipo Produto
 }
 
 export interface ProdutoPedidoPayload {
@@ -223,6 +224,7 @@ export interface CreatePedidoPayload {
   formaPagamento_id: number;
   situacaoPedido: string;
   isRetiradaEstabelecimento: boolean;
+  taxaentrega: number;
   nomeCliente: string;
   telefoneCliente: string;
   cepCliente: string;
@@ -260,4 +262,19 @@ export interface UpdatePedidoPayload {
 // A interface do menu é geralmente uma categoria de produto com seus produtos inclusos
 export interface Menu extends CategoriaProduto {
   produtos: Produto[];
+}
+
+// Tipos para as respostas da API do dashboard
+export interface MonthlyRevenueResponse {
+  totalRevenue: number;
+}
+
+export interface MonthlyOrderCount {
+  month: string;
+  count: number;
+}
+
+export interface PaymentDistribution {
+  label: string;
+  value: number;
 }

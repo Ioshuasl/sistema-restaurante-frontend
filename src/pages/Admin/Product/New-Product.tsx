@@ -1,74 +1,101 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // para redirecionar
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ToggleSwitch from '../Components/ToggleSwitch';
 import Sidebar from '../Components/Sidebar';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-// Interface para categoria
-type Category = {
-  id: number;
-  name: string;
-};
-
-// Interface para produto
-interface Product {
-  name: string;
-  description: string;
-  price: number;
-  categoryId: number;
-  isAtivo: boolean;
-  image: File | null;
-}
+import { type CategoriaProduto, type CreateProdutoPayload } from '../../../types/interfaces-types';
+import { createProduto } from '../../../services/produtoService';
+import { getAllCategoriasProdutos } from '../../../services/categoriaProdutoService';
+import api from '../../../services/api';
 
 export default function NewProduct() {
   const navigate = useNavigate();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [nomeProduto, setNomeProduto] = useState('');
+  const [valorProduto, setValorProduto] = useState('');
+  const [categoriaProduto_id, setCategoriaProduto_id] = useState('');
   const [isAtivo, setIsAtivo] = useState(true);
-  const [image, setImage] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null); // Alterado para File
 
-  const [categories] = useState<Category[]>([
-    { id: 1, name: 'Pizza' },
-    { id: 2, name: 'Bebida' },
-    { id: 3, name: 'Lanche' },
-  ]);
+  const [categories, setCategories] = useState<CategoriaProduto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesData = await getAllCategoriasProdutos();
+        setCategories(categoriesData);
+      } catch (err) {
+        console.error("Erro ao buscar categorias:", err);
+        toast.error("Não foi possível carregar as categorias.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const response = await api.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.imageUrl;
+    } catch (error) {
+      console.error("Erro ao fazer upload da imagem:", error);
+      throw new Error("Erro ao fazer upload da imagem.");
+    }
+  };
 
   const handleCreateProduct = async () => {
-    // Validação simples
-    if (!name || !description || !price || !categoryId || !image) {
-      alert('Preencha todos os campos!');
+    if (!nomeProduto || !valorProduto || !categoriaProduto_id || !imageFile) {
+      toast.error('Por favor, preencha todos os campos e selecione uma imagem.');
       return;
     }
 
-    const newProduct: Product = {
-      name,
-      description,
-      price: parseFloat(price),
-      categoryId: parseInt(categoryId),
-      isAtivo,
-      image,
-    };
+    setIsSubmitting(true);
+    let uploadedImageUrl = '';
 
     try {
-      console.log('Enviando produto:', newProduct);
-      // Aqui poderia ser uma requisição real:
-      // await api.post('/products', newProduct);
+      uploadedImageUrl = await uploadImage(imageFile);
 
-      setTimeout(() => {
-        alert('Produto cadastrado com sucesso!');
-        navigate('/admin/product/consult'); // volta para a listagem de produtos
-      }, 1000);
+      const newProductPayload: CreateProdutoPayload = {
+        nomeProduto,
+        valorProduto: parseFloat(valorProduto),
+        categoriaProduto_id: parseInt(categoriaProduto_id),
+        isAtivo,
+        image: uploadedImageUrl,
+      };
+
+      await createProduto(newProductPayload);
+      toast.success('Produto cadastrado com sucesso!');
+      navigate('/admin/product/consult');
     } catch (error) {
       console.error('Erro ao cadastrar produto:', error);
-      alert('Erro ao cadastrar produto.');
+      toast.error('Erro ao cadastrar produto. Verifique os dados.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/admin/dashboard'); // redireciona para a listagem de produtos
+    navigate('/admin/product/consult');
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <p className="text-gray-600">Carregando categorias...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -87,9 +114,9 @@ export default function NewProduct() {
                     Nome:
                     <input
                       type="text"
-                      value={name}
+                      value={nomeProduto}
                       placeholder='Nome'
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => setNomeProduto(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg"
                     />
                   </label>
@@ -98,14 +125,14 @@ export default function NewProduct() {
                   <label className="text-sm text-gray-600">
                     Categoria:
                     <select
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
+                      value={categoriaProduto_id}
+                      onChange={(e) => setCategoriaProduto_id(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg"
                     >
                       <option value="">Selecione uma categoria</option>
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
-                          {category.name}
+                          {category.nomeCategoriaProduto}
                         </option>
                       ))}
                     </select>
@@ -118,23 +145,13 @@ export default function NewProduct() {
                       type="number"
                       step="0.01"
                       placeholder='00.00'
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      value={valorProduto}
+                      onChange={(e) => setValorProduto(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg"
                     />
                   </label>
                 </div>
               </div>
-              <label className="text-sm text-gray-600">
-                Descrição:
-                <textarea
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </label>
-
 
               <label className="text-sm text-gray-600">
                 Ativo:
@@ -145,15 +162,17 @@ export default function NewProduct() {
                   />
                 </div>
               </label>
+
               <label className="text-sm text-gray-600">
                 Imagem:
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setImage(e.target.files?.[0] || null)}
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </label>
+
               <div className="flex gap-4">
                 <button
                   type="button"
@@ -165,15 +184,17 @@ export default function NewProduct() {
                 <button
                   type="button"
                   onClick={handleCreateProduct}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
+                  disabled={isSubmitting}
+                  className={`flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Cadastrar
+                  {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       </main>
+      <ToastContainer />
     </div>
   );
 }

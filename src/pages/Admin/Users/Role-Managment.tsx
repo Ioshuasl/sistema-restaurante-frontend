@@ -1,78 +1,148 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ToggleSwitch from "../Components/ToggleSwitch";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-type Cargo = {
-    id: number;
-    name: string;
-};
-
-const initialCargos: Cargo[] = [
-    { id: 1, name: "colaborador" },
-    { id: 2, name: "administrador" },
-    { id: 3, name: "entregador" },
-];
+import { type Cargo } from '../../../types/interfaces-types';
+import { getCargos, createCargo, updateCargo, deleteCargo } from '../../../services/cargoService';
 
 export default function RoleManagment() {
-    const [cargos, setCargos] = useState<Cargo[]>(initialCargos);
+    const [cargos, setCargos] = useState<Cargo[]>([]);
     const [filter, setFilter] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Estados para o novo cargo
     const [newCargoName, setNewCargoName] = useState("");
+    const [newCargoDescricao, setNewCargoDescricao] = useState("");
+    const [newCargoAdmin, setNewCargoAdmin] = useState(false);
+
+    // Estados para edição
     const [cargoBeingEdited, setCargoBeingEdited] = useState<Cargo | null>(null);
     const [editCargoName, setEditCargoName] = useState("");
+    const [editCargoDescricao, setEditCargoDescricao] = useState("");
+    const [editCargoAdmin, setEditCargoAdmin] = useState(false);
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const navigate = useNavigate();
 
+    const fetchCargos = async () => {
+        try {
+            setIsLoading(true);
+            const cargosData = await getCargos();
+            setCargos(cargosData);
+        } catch (err) {
+            console.error("Erro ao buscar cargos:", err);
+            setError("Não foi possível carregar os cargos.");
+            toast.error("Erro ao carregar cargos.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCargos();
+    }, []);
+
     const filteredCargos = cargos.filter((cargo) =>
-        cargo.name.toLowerCase().includes(filter.toLowerCase())
+        cargo.nome.toLowerCase().includes(filter.toLowerCase())
     );
 
-    const handleAddCargo = () => {
+    const handleAddCargo = async () => {
         if (!newCargoName.trim()) {
-            alert("Digite o nome do cargo!");
+            toast.error("Digite o nome do cargo!");
             return;
         }
 
-        const newCargo: Cargo = {
-            id: cargos.length > 0 ? cargos[cargos.length - 1].id + 1 : 1,
-            name: newCargoName.trim()
-        };
-
-        setCargos([...cargos, newCargo]);
-        setNewCargoName("");
-        setIsModalOpen(false);
-        alert(`Cargo "${newCargo.name}" cadastrado com sucesso!`);
+        setIsSubmitting(true);
+        try {
+            await createCargo({
+                nome: newCargoName.trim(),
+                descricao: newCargoDescricao.trim(),
+                admin: newCargoAdmin,
+            });
+            toast.success(`Cargo "${newCargoName}" cadastrado com sucesso!`);
+            setNewCargoName("");
+            setNewCargoDescricao("");
+            setNewCargoAdmin(false);
+            setIsModalOpen(false);
+            fetchCargos();
+        } catch (err) {
+            console.error("Erro ao adicionar cargo:", err);
+            toast.error("Erro ao adicionar o cargo.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const handleDeleteCargo = (id: number) => {
-        const confirmDelete = confirm("Tem certeza que deseja excluir este cargo?");
+    const handleDeleteCargo = async (id: number) => {
+        const confirmDelete = window.confirm("Tem certeza que deseja excluir este cargo?");
         if (confirmDelete) {
-            setCargos(cargos.filter((cargo) => cargo.id !== id));
+            try {
+                await deleteCargo(id);
+                toast.success("Cargo excluído com sucesso!");
+                fetchCargos();
+            } catch (err) {
+                console.error("Erro ao excluir cargo:", err);
+                toast.error("Erro ao excluir o cargo.");
+            }
         }
     };
 
     const handleEditCargo = (cargo: Cargo) => {
         setCargoBeingEdited(cargo);
-        setEditCargoName(cargo.name);
+        setEditCargoName(cargo.nome);
+        setEditCargoDescricao(cargo.descricao);
+        setEditCargoAdmin(cargo.admin);
     };
 
-    const handleUpdateCargo = () => {
-        if (!editCargoName.trim()) {
-            alert("Digite o nome do cargo!");
+    const handleUpdateCargo = async () => {
+        if (!editCargoName.trim() || !cargoBeingEdited) {
+            toast.error("Digite o nome do cargo!");
             return;
         }
+        setIsSubmitting(true);
 
-        setCargos((prevCargos) =>
-            prevCargos.map((c) =>
-                c.id === cargoBeingEdited?.id ? { ...c, name: editCargoName.trim() } : c
-            )
-        );
-
-        setCargoBeingEdited(null);
-        setEditCargoName("");
-        alert("Cargo atualizado com sucesso!");
+        try {
+            await updateCargo(cargoBeingEdited.id, {
+                nome: editCargoName.trim(),
+                descricao: editCargoDescricao.trim(),
+                admin: editCargoAdmin,
+            });
+            toast.success("Cargo atualizado com sucesso!");
+            setCargoBeingEdited(null);
+            setEditCargoName("");
+            setEditCargoDescricao("");
+            setEditCargoAdmin(false);
+            fetchCargos();
+        } catch (err) {
+            console.error("Erro ao atualizar cargo:", err);
+            toast.error("Erro ao atualizar o cargo.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-gray-600">Carregando cargos...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-red-600">{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex bg-gray-100">
@@ -110,33 +180,42 @@ export default function RoleManagment() {
                         <div>
                             <h2 className="text-lg font-semibold mb-2">Cargos Cadastrados:</h2>
                             <ul className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {filteredCargos.map((cargo) => (
-                                    <li
-                                        key={cargo.id}
-                                        className="flex flex-col gap-2 border border-gray-300 rounded-md px-3 py-2"
-                                    >
-                                        <h3 className="text-lg font-semibold">
-                                            {cargo.name.charAt(0).toUpperCase() + cargo.name.slice(1)}
-                                        </h3>
-                                        <div className="flex gap-2 mt-2">
-                                            <button
-                                                onClick={() => handleEditCargo(cargo)}
-                                                className="p-2 rounded hover:bg-gray-100"
-                                                title="Editar"
-                                            >
-                                                <Pencil className="w-5 h-5 text-gray-600" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteCargo(cargo.id)}
-                                                className="p-2 rounded hover:bg-gray-100"
-                                                title="Excluir"
-                                            >
-                                                <Trash2 className="w-5 h-5 text-red-600" />
-                                            </button>
-                                        </div>
-                                    </li>
-                                ))}
-                                {filteredCargos.length === 0 && (
+                                {filteredCargos.length > 0 ? (
+                                    filteredCargos.map((cargo) => (
+                                        <li
+                                            key={cargo.id}
+                                            className="flex flex-col gap-2 border border-gray-300 rounded-md px-3 py-2"
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <h3 className="text-lg font-semibold">
+                                                    {cargo.nome.charAt(0).toUpperCase() + cargo.nome.slice(1)}
+                                                </h3>
+                                                {cargo.admin && (
+                                                    <span className="text-xs font-semibold text-white bg-indigo-600 px-2 py-1 rounded-full">
+                                                        Admin
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-600">{cargo.descricao}</p>
+                                            <div className="flex gap-2 mt-2">
+                                                <button
+                                                    onClick={() => handleEditCargo(cargo)}
+                                                    className="p-2 rounded hover:bg-gray-100"
+                                                    title="Editar"
+                                                >
+                                                    <Pencil className="w-5 h-5 text-gray-600" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteCargo(cargo.id)}
+                                                    className="p-2 rounded hover:bg-gray-100"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 className="w-5 h-5 text-red-600" />
+                                                </button>
+                                            </div>
+                                        </li>
+                                    ))
+                                ) : (
                                     <li className="text-gray-500 italic">
                                         Nenhum cargo encontrado.
                                     </li>
@@ -149,16 +228,36 @@ export default function RoleManagment() {
 
             {/* Modal Novo Cargo */}
             {isModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.70)] z-50">
+                <div className="fixed inset-0 flex items-center justify-center bg-transparent backdrop-blur-sm z-50">
                     <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-                        <h2 className="text-xl font-bold mb-4">Cadastrar Novo Cargo</h2>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">Cadastrar Novo Cargo</h2>
+                            <button onClick={() => setIsModalOpen(false)}>
+                                <X size={20} className="text-gray-500 hover:text-gray-700" />
+                            </button>
+                        </div>
+                        <label className="block mb-2 font-medium">Nome do Cargo:</label>
                         <input
                             type="text"
                             value={newCargoName}
                             onChange={(e) => setNewCargoName(e.target.value)}
                             className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
-                            placeholder="Digite o nome do novo cargo"
+                            placeholder="Ex: Administrador, Entregador..."
                         />
+                        <label className="block mb-2 font-medium">Descrição:</label>
+                        <textarea
+                            value={newCargoDescricao}
+                            onChange={(e) => setNewCargoDescricao(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
+                            placeholder="Breve descrição do cargo"
+                        />
+                        <div className="flex items-center mb-4">
+                            <span className="font-medium mr-2">Administrador:</span>
+                            <ToggleSwitch
+                                checked={newCargoAdmin}
+                                onChange={() => setNewCargoAdmin(!newCargoAdmin)}
+                            />
+                        </div>
                         <div className="flex justify-end gap-2">
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -168,9 +267,10 @@ export default function RoleManagment() {
                             </button>
                             <button
                                 onClick={handleAddCargo}
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
+                                disabled={isSubmitting}
+                                className={`px-4 py-2 rounded-lg transition ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                             >
-                                Adicionar
+                                {isSubmitting ? "Adicionando..." : "Adicionar"}
                             </button>
                         </div>
                     </div>
@@ -179,9 +279,15 @@ export default function RoleManagment() {
 
             {/* Modal Editar Cargo */}
             {cargoBeingEdited && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-                        <h2 className="text-xl font-bold mb-4">Editar Cargo</h2>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">Editar Cargo</h2>
+                            <button onClick={() => setCargoBeingEdited(null)}>
+                                <X size={20} className="text-gray-500 hover:text-gray-700" />
+                            </button>
+                        </div>
+                        <label className="block mb-2 font-medium">Nome do Cargo:</label>
                         <input
                             type="text"
                             value={editCargoName}
@@ -189,6 +295,20 @@ export default function RoleManagment() {
                             className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
                             placeholder="Digite o novo nome do cargo"
                         />
+                        <label className="block mb-2 font-medium">Descrição:</label>
+                        <textarea
+                            value={editCargoDescricao}
+                            onChange={(e) => setEditCargoDescricao(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
+                            placeholder="Breve descrição do cargo"
+                        />
+                        <div className="flex items-center mb-4">
+                            <span className="font-medium mr-2">Administrador:</span>
+                            <ToggleSwitch
+                                checked={editCargoAdmin}
+                                onChange={() => setEditCargoAdmin(!editCargoAdmin)}
+                            />
+                        </div>
                         <div className="flex justify-end gap-2">
                             <button
                                 onClick={() => setCargoBeingEdited(null)}
@@ -198,14 +318,16 @@ export default function RoleManagment() {
                             </button>
                             <button
                                 onClick={handleUpdateCargo}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+                                disabled={isSubmitting}
+                                className={`px-4 py-2 rounded-lg transition ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                             >
-                                Salvar
+                                {isSubmitting ? "Salvando..." : "Salvar"}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+            <ToastContainer />
         </div>
     );
 }

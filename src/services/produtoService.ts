@@ -8,7 +8,7 @@ export const createProduto = async (payload: CreateProdutoPayload): Promise<Prod
 
 export const getAllProdutos = async (): Promise<Produto[]> => {
   const response = await api.get('/produto');
-  return response.data;
+  return response.data.rows;
 };
 
 export const getProdutoById = async (id: number): Promise<Produto> => {

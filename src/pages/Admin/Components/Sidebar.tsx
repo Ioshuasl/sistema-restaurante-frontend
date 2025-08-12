@@ -147,7 +147,7 @@ export default function Sidebar() {
               {openMenus.includes("category") && (
                 <div className="ml-6 flex flex-col gap-2">
                   <Link
-                    to="/admin/category-product/consult"
+                    to="/admin/category-product"
                     className={isActive("/admin/category-product/consult")}
                     onClick={() => setIsSidebarOpen(false)}
                   >

@@ -8,6 +8,7 @@ export const getConfig = async (): Promise<Config> => {
 };
 
 export const updateConfig = async (payload: UpdateConfigPayload): Promise<Config> => {
-  const response = await api.put('/config', payload);
-  return response.data;
+    // O backend atualiza a configuração com ID 1, então não é necessário passar o ID
+    const response = await api.put('/config', payload);
+    return response.data;
 };

@@ -1,77 +1,85 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Sidebar from "../Components/Sidebar";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../Components/Sidebar';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-interface Category {
-  id: number;
-  name: string;
-}
+import { createCategoriaProduto } from '../../../services/categoriaProdutoService';
 
 export default function NewProductCategory() {
-  const [name, setName] = useState<string>("");
   const navigate = useNavigate();
+  const [categoryName, setCategoryName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      alert("O nome da categoria não pode estar vazio.");
+  const handleCreateCategory = async () => {
+    if (!categoryName.trim()) {
+      toast.error('O nome da categoria não pode ser vazio.');
       return;
     }
 
-    
-    // Simular cadastro
-    const newCategory: Category = {
-        id: Date.now(), // Simulação de ID único
-        name,
-    };
-    
-    confirm(`Confirma o cadastro de ${newCategory.name}`)
-    console.log("Nova categoria cadastrada:", newCategory);
+    setIsSubmitting(true);
 
-    // Navegar de volta para a tela de gerenciamento de categorias
-    navigate("/admin/category-product/consult");
+    try {
+      await createCategoriaProduto({ nomeCategoriaProduto: categoryName });
+      toast.success(`Categoria "${categoryName}" cadastrada com sucesso!`);
+      setCategoryName('');
+      navigate('/admin/category-product');
+    } catch (error) {
+      console.error('Erro ao cadastrar categoria:', error);
+      toast.error('Erro ao cadastrar categoria. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
-    navigate("/admin/category-product/consult");
+    navigate('/admin/category-product');
   };
 
   return (
     <div className="min-h-screen flex bg-gray-100">
-      <main className="flex flex-1">
+      <title>Gerenciamento de Produtos</title>
+      <main className="flex flex-1 bg-gray-100">
         <Sidebar />
+        <div className="flex flex-col flex-1 items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xl">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">
+              Cadastrar Nova Categoria
+            </h2>
+            <div className="flex flex-col gap-4">
+              <label className="text-sm text-gray-600">
+                Nome da Categoria:
+                <input
+                  type="text"
+                  value={categoryName}
+                  placeholder="Ex: Pizzas, Bebidas, Lanches..."
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </label>
 
-        <div className="flex-1 p-6">
-          <h1 className="text-2xl font-bold mb-4">Cadastrar Nova Categoria de Produto</h1>
-
-          <div className="flex flex-col bg-white rounded-lg shadow p-6 w-full max-w-lg">
-            <div className="mb-4">
-              <label className="block mb-1 font-medium">Nome da Categoria</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="Digite o nome da categoria"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 rounded-md text-white bg-red-500 hover:bg-red-600"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
-              >
-                Cadastrar
-              </button>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateCategory}
+                  disabled={isSubmitting}
+                  className={`flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </main>
+      <ToastContainer />
     </div>
   );
 }

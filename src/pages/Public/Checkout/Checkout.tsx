@@ -48,22 +48,24 @@ export default function Checkout({
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [complemento, setComplemento] = useState('')
-  const [retiradaLocal, setRetiradaLocal] = useState(true);
+  const [retiradaLocal, setRetiradaLocal] = useState(false);
   const [payment, setPayment] = useState<number | ''>('');
   const [paymentMethods, setPaymentMethods] = useState<FormaPagamento[]>([]);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [taxaEntrega, setTaxaEntrega] = useState(0);
+  const [taxaEntrega, setTaxaEntrega] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
+  // CORREÇÃO: Converte explicitamente para número para evitar erros de tipo
   const totalProdutos = cart.reduce(
-    (acc, item) => acc + item.product.valorProduto * item.quantity,
+    (acc, item) => acc + Number(item.product.valorProduto) * item.quantity,
     0
   );
 
-  const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + taxaEntrega;
+  // CORREÇÃO: Converte explicitamente para número para evitar erros de tipo
+  const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + Number(taxaEntrega);
 
   // Efeito para buscar a taxa de entrega e as formas de pagamento
   useEffect(() => {
@@ -73,8 +75,10 @@ export default function Checkout({
           getConfig(),
           getAllFormasPagamento(),
         ]);
-        setTaxaEntrega(config.taxaEntrega);
+        // CORREÇÃO: Converte o valor para Number antes de definir o estado
+        setTaxaEntrega(Number(config.taxaEntrega));
         setPaymentMethods(methods);
+        console.log("Dados carregados com sucesso. Tipo da taxa de entrega:", typeof Number(config.taxaEntrega), Number(config.taxaEntrega));
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
         toast.error("Erro ao carregar dados. Tente novamente.");
@@ -114,7 +118,7 @@ export default function Checkout({
       const orderPayload: CreatePedidoPayload = {
         produtosPedido: produtosPedido,
         formaPagamento_id: Number(payment),
-        situacaoPedido: 'Pendente', // Status inicial
+        situacaoPedido: 'preparando', // Status inicial
         isRetiradaEstabelecimento: retiradaLocal,
         nomeCliente: name,
         telefoneCliente: telefone,
@@ -127,13 +131,17 @@ export default function Checkout({
         bairroCliente: bairro,
         cidadeCliente: cidade,
         estadoCliente: estado,
+        taxaentrega: taxaEntrega
       };
+      
+      console.log("Payload do pedido a ser enviado:", orderPayload);
 
-      await createPedido(orderPayload);
+      const pedido = await createPedido(orderPayload);
+      console.log(pedido)
 
       toast.success('Pedido enviado com sucesso!');
       onConfirm();
-      navigate('/pedido-confirmado');
+      navigate('/pedido-confirmado', { state: { pedidoId: pedido.id } });
 
     } catch (error) {
       console.error('Erro ao enviar pedido:', error);
@@ -150,6 +158,15 @@ export default function Checkout({
     setCidade(data.localidade || "");
     setEstado(data.uf || "") // A API do ViaCEP retorna 'uf'
   }
+
+  // Função auxiliar para verificar o tipo e formatar o valor
+  const formatValue = (value: number) => {
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value.toFixed(2);
+    }
+    console.error("Erro: valor com formato incorreto. Valor recebido:", value);
+    return "Erro: valor está com formato correto";
+  };
 
   if (isLoading) {
     return (
@@ -207,7 +224,7 @@ export default function Checkout({
                     </div>
                   </div>
                   <p className="text-md font-semibold text-gray-700 whitespace-nowrap">
-                    R$ {(item.product.valorProduto * item.quantity).toFixed(2)}
+                    R$ {formatValue(Number(item.product.valorProduto) * item.quantity)}
                   </p>
                 </li>
               ))}
@@ -218,7 +235,7 @@ export default function Checkout({
               SubTotal:
             </span>
             <span className="text-lg font-bold text-gray-800">
-              R$ {totalProdutos.toFixed(2)}
+              R$ {formatValue(totalProdutos)}
             </span>
           </div>
         </div>
@@ -375,7 +392,7 @@ export default function Checkout({
           <div className="mb-6">
             <div className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-lg">
               <span className="text-lg font-bold text-gray-800">
-                Total: R$ {valorTotal.toFixed(2)}
+                Total: R$ {formatValue(valorTotal)}
               </span>
               <button
                 onClick={() => setShowOrderDetails(!showOrderDetails)}
@@ -398,12 +415,12 @@ export default function Checkout({
               <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-700 space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>R$ {totalProdutos.toFixed(2)}</span>
+                  <span>R$ {formatValue(totalProdutos)}</span>
                 </div>
                 {!retiradaLocal && (
                   <div className="flex justify-between">
                     <span>Taxa de Entrega:</span>
-                    <span>R$ {taxaEntrega.toFixed(2)}</span>
+                    <span>R$ {formatValue(taxaEntrega)}</span>
                   </div>
                 )}
               </div>

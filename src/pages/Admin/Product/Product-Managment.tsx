@@ -1,23 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
 import { Pencil, Trash2 } from "lucide-react";
 import ToggleSwitch from "../Components/ToggleSwitch";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-type Product = {
-    id: number;
-    name: string;
-    description: string;
-    price: number;
-    categoryId: number;
-    isAtivo: boolean;
-    imageUrl: string;
-};
-
-type Category = {
-    id: number;
-    name: string;
-};
+import { type Produto, type CategoriaProduto } from "../../../types/interfaces-types";
+import {
+    getAllProdutos,
+    updateProduto,
+    toggleProdutoAtivo,
+    deleteProduto
+} from "../../../services/produtoService";
+import { getAllCategoriasProdutos } from "../../../services/categoriaProdutoService";
+import api from '../../../services/api';
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -25,49 +22,44 @@ export default function ProductManagement() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<number | "">("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-    const [products, setProducts] = useState<Product[]>([
-        {
-            id: 1,
-            name: "Pizza Calabresa",
-            description: "Pizza deliciosa com calabresa",
-            price: 35.9,
-            categoryId: 1,
-            isAtivo: true,
-            imageUrl: "https://via.placeholder.com/150" // Exemplo
-        },
-        {
-            id: 2,
-            name: "Coca-Cola 2L",
-            description: "Refrigerante gelado",
-            price: 8.0,
-            categoryId: 2,
-            isAtivo: false,
-            imageUrl: "https://via.placeholder.com/150" // Exemplo
-        },
-        {
-            id: 3,
-            name: "Hambúrguer",
-            description: "Hambúrguer artesanal",
-            price: 22.5,
-            categoryId: 3,
-            isAtivo: true,
-            imageUrl: "https://via.placeholder.com/150" // Exemplo
-        },
-    ]);
+    const [products, setProducts] = useState<Produto[]>([]);
+    const [categories, setCategories] = useState<CategoriaProduto[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Novo estado para a nova imagem
+    const [newImageFile, setNewImageFile] = useState<File | null>(null);
 
-    const [categories] = useState<Category[]>([
-        { id: 1, name: "Pizza" },
-        { id: 2, name: "Bebida" },
-        { id: 3, name: "Lanche" },
-    ]);
+    const navigate = useNavigate();
 
-    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const fetchProductsAndCategories = async () => {
+        try {
+            setIsLoading(true);
+            const [productsData, categoriesData] = await Promise.all([
+                getAllProdutos(),
+                getAllCategoriasProdutos(),
+            ]);
+            setProducts(productsData);
+            setCategories(categoriesData);
+        } catch (err) {
+            console.error("Erro ao buscar dados:", err);
+            setError("Não foi possível carregar os produtos e categorias.");
+            toast.error("Erro ao carregar dados.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProductsAndCategories();
+    }, []);
 
     const filteredProducts = products.filter((product) => {
-        const matchName = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchCategory = selectedCategory === "" || product.categoryId === selectedCategory;
+        const matchName = product.nomeProduto.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchCategory = selectedCategory === "" || product.categoriaProduto_id === selectedCategory;
 
-        // Filtra conforme status selecionado
         const matchStatus =
             statusFilter === "all" ||
             (statusFilter === "active" && product.isAtivo) ||
@@ -76,46 +68,104 @@ export default function ProductManagement() {
         return matchName && matchCategory && matchStatus;
     });
 
-    const toggleProductStatus = (productId: number) => {
-        console.log(`Simulando PUT para alternar status do produto ${productId}...`);
-        setTimeout(() => {
-            setProducts((prevProducts) =>
-                prevProducts.map((product) =>
-                    product.id === productId ? { ...product, isAtivo: !product.isAtivo } : product
-                )
-            );
-            alert(`Status do produto ${productId} atualizado (simulação).`);
-        }, 1000);
+    const toggleProductStatus = async (productId: number) => {
+        try {
+            await toggleProdutoAtivo(productId);
+            toast.success(`Status do produto #${productId} atualizado.`);
+            fetchProductsAndCategories(); // Recarrega para obter os dados mais recentes
+        } catch (err) {
+            console.error("Erro ao alternar status:", err);
+            toast.error("Erro ao alternar o status do produto.");
+        }
     };
 
-    const handleEditSave = () => {
-        if (editingProduct) {
-            console.log(`Simulando PUT para editar produto ${editingProduct.id}...`);
-            setTimeout(() => {
-                setProducts((prevProducts) =>
-                    prevProducts.map((product) =>
-                        product.id === editingProduct.id ? editingProduct : product
-                    )
-                );
-                alert(`Produto ${editingProduct.id} atualizado (simulação).`);
-                setEditingProduct(null);
-            }, 1000);
+    const uploadImage = async (file: File): Promise<string> => {
+        const formData = new FormData();
+        formData.append('image', file);
+        try {
+            const response = await api.post('/upload/image', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return response.data.imageUrl;
+        } catch (error) {
+            console.error("Erro ao fazer upload da imagem:", error);
+            throw new Error("Erro ao fazer upload da imagem.");
+        }
+    };
+
+    const handleEditSave = async () => {
+        if (!editingProduct) return;
+        setIsSubmitting(true);
+        let updatedImageUrl = editingProduct.image;
+
+        try {
+            // Se um novo arquivo de imagem foi selecionado, faça o upload primeiro
+            if (newImageFile) {
+                updatedImageUrl = await uploadImage(newImageFile);
+            }
+
+            await updateProduto(editingProduct.id, {
+                nomeProduto: editingProduct.nomeProduto,
+                valorProduto: editingProduct.valorProduto,
+                image: updatedImageUrl, // Usa a nova URL ou a original
+                isAtivo: editingProduct.isAtivo,
+                categoriaProduto_id: editingProduct.categoriaProduto_id,
+            });
+            toast.success(`Produto #${editingProduct.id} atualizado com sucesso.`);
+            setEditingProduct(null);
+            setNewImageFile(null); // Limpa o estado da nova imagem
+            fetchProductsAndCategories();
+        } catch (err) {
+            console.error("Erro ao salvar edição:", err);
+            toast.error("Erro ao salvar as alterações do produto.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteProduct = async (e: React.MouseEvent, productId: number) => {
+        e.stopPropagation();
+        if (window.confirm("Tem certeza que deseja excluir este produto?")) {
+            try {
+                await deleteProduto(productId);
+                toast.success(`Produto #${productId} excluído com sucesso.`);
+                fetchProductsAndCategories();
+            } catch (err) {
+                console.error("Erro ao excluir produto:", err);
+                toast.error("Erro ao excluir o produto.");
+            }
         }
     };
 
     const getCategoryName = (categoryId: number) => {
         const category = categories.find((c) => c.id === categoryId);
-        return category ? category.name : "Categoria Desconhecida";
+        return category ? category.nomeCategoriaProduto : "Categoria Desconhecida";
     };
 
-    const navigate = useNavigate()
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-gray-600">Carregando produtos...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-red-600">{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex bg-gray-100">
             <title>Gerenciamento de Produtos</title>
 
             <main className="flex flex-1">
-            <Sidebar />
+                <Sidebar />
                 <div className="flex-1 p-6">
                     <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Produtos</h1>
 
@@ -139,7 +189,7 @@ export default function ProductManagement() {
                             <option value="">Todas as categorias</option>
                             {categories.map((category) => (
                                 <option key={category.id} value={category.id}>
-                                    {category.name}
+                                    {category.nomeCategoriaProduto}
                                 </option>
                             ))}
                         </select>
@@ -168,69 +218,66 @@ export default function ProductManagement() {
 
                     {/* Lista de Produtos */}
                     <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredProducts.map((product) => (
-                            <div
-                                key={product.id}
-                                className="bg-white shadow-md rounded-xl p-5 border border-gray-100 flex flex-col justify-between"
-                            >
-                                {/* IMAGEM */}
-                                <div className="mb-4 flex justify-center">
-                                    <img
-                                        src={product.imageUrl}
-                                        alt={product.name}
-                                        className="w-32 h-32 object-cover rounded-lg"
-                                    />
-                                </div>
-
-                                {/* Informações do produto */}
-                                <div className="flex items-center justify-between mb-2">
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-indigo-600">{product.name}</h2>
-                                        <span className="text-gray-600 text-sm">
-                                            {getCategoryName(product.categoryId)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <ToggleSwitch
-                                            checked={product.isAtivo}
-                                            onChange={() => toggleProductStatus(product.id)}
+                        {filteredProducts.length > 0 ? (
+                            filteredProducts.map((product) => (
+                                <div
+                                    key={product.id}
+                                    className="bg-white shadow-md rounded-xl p-5 border border-gray-100 flex flex-col justify-between cursor-pointer"
+                                    onClick={() => setEditingProduct(product)}
+                                >
+                                    {/* IMAGEM */}
+                                    <div className="mb-4 flex justify-center">
+                                        <img
+                                            src={product.image}
+                                            alt={product.nomeProduto}
+                                            className="w-32 h-32 object-cover rounded-lg"
                                         />
                                     </div>
-                                </div>
 
-                                <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                                <p className="text-gray-800 font-semibold mb-4">
-                                    Preço: R$ {product.price.toFixed(2)}
-                                </p>
+                                    {/* Informações do produto */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-indigo-600">{product.nomeProduto}</h2>
+                                            <span className="text-gray-600 text-sm">
+                                                {getCategoryName(product.categoriaProduto_id)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <ToggleSwitch
+                                                checked={product.isAtivo}
+                                                onChange={() => toggleProductStatus(product.id)}
+                                            />
+                                        </div>
+                                    </div>
 
-                                {/* Ações */}
-                                <div className="flex justify-end gap-2 mt-auto">
-                                    <button
-                                        onClick={() => setEditingProduct(product)}
-                                        className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-1"
-                                    >
-                                        <Pencil size={16} />
-                                        Editar
-                                    </button>
-                                    <button
-                                        onClick={() => alert(`Excluir produto ${product.id} (simulação).`)}
-                                        className="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-1"
-                                    >
-                                        <Trash2 size={16} />
-                                        Excluir
-                                    </button>
+                                    <p className="text-gray-800 font-semibold mb-4">
+                                        Preço: R$ {Number(product.valorProduto).toFixed(2)}
+                                    </p>
+
+                                    {/* Ações */}
+                                    <div className="flex justify-end gap-2 mt-auto">
+                                        <button
+                                            onClick={(e) => handleDeleteProduct(e, product.id)}
+                                            className="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-1"
+                                        >
+                                            <Trash2 size={16} />
+                                            Excluir
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-gray-500">Nenhum produto encontrado.</p>
+                        )}
                     </div>
                 </div>
             </main>
 
             {/* Modal de edição */}
             {editingProduct && (
-                <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.70)] z-50">
+                <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl p-6 w-full max-w-250 overflow-y-auto max-h-[90vh]">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">Editar {editingProduct.name}</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Editar {editingProduct.nomeProduto}</h2>
 
                         <div className="flex flex-col gap-3">
                             {/* Ativo */}
@@ -249,11 +296,11 @@ export default function ProductManagement() {
                                 Nome:
                                 <input
                                     type="text"
-                                    value={editingProduct.name}
+                                    value={editingProduct.nomeProduto}
                                     onChange={(e) =>
                                         setEditingProduct({
                                             ...editingProduct,
-                                            name: e.target.value,
+                                            nomeProduto: e.target.value,
                                         })
                                     }
                                     className="w-full px-3 py-2 border rounded-lg"
@@ -262,47 +309,20 @@ export default function ProductManagement() {
 
                             {/* Imagem */}
                             <label className="text-gray-600">
-                                Imagem do Produto:
-                                <div className="flex items-center gap-4 mt-2">
-                                    {/* Pré-visualização da imagem */}
-                                    {editingProduct.imageUrl && (
-                                        <img
-                                            src={editingProduct.imageUrl}
-                                            alt={editingProduct.name}
-                                            className="w-30 h-30 object-cover rounded-md border"
-                                        />
-                                    )}
+                                Imagem Atual:
+                                <div className="flex flex-col items-center gap-4 mt-2">
+                                    <img
+                                        src={newImageFile ? URL.createObjectURL(newImageFile) : editingProduct.image}
+                                        alt={editingProduct.nomeProduto}
+                                        className="w-30 h-30 object-cover rounded-md border"
+                                    />
                                     <input
                                         type="file"
                                         accept="image/*"
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                const imageUrl = URL.createObjectURL(file);
-                                                setEditingProduct({
-                                                    ...editingProduct,
-                                                    imageUrl: imageUrl,
-                                                });
-                                            }
-                                        }}
-                                        className="text-gray-600"
+                                        onChange={(e) => setNewImageFile(e.target.files?.[0] || null)}
+                                        className="w-full text-gray-600"
                                     />
                                 </div>
-                            </label>
-
-                            {/* Descrição */}
-                            <label className="text-gray-600">
-                                Descrição:
-                                <textarea
-                                    value={editingProduct.description}
-                                    onChange={(e) =>
-                                        setEditingProduct({
-                                            ...editingProduct,
-                                            description: e.target.value,
-                                        })
-                                    }
-                                    className="w-full px-3 py-2 border rounded-lg"
-                                />
                             </label>
 
                             {/* Preço */}
@@ -311,11 +331,11 @@ export default function ProductManagement() {
                                 <input
                                     type="number"
                                     step="0.01"
-                                    value={editingProduct.price}
+                                    value={editingProduct.valorProduto}
                                     onChange={(e) =>
                                         setEditingProduct({
                                             ...editingProduct,
-                                            price: parseFloat(e.target.value),
+                                            valorProduto: parseFloat(e.target.value),
                                         })
                                     }
                                     className="w-full px-3 py-2 border rounded-lg"
@@ -326,11 +346,11 @@ export default function ProductManagement() {
                             <label className="text-gray-600">
                                 Categoria:
                                 <select
-                                    value={editingProduct.categoryId}
+                                    value={editingProduct.categoriaProduto_id}
                                     onChange={(e) =>
                                         setEditingProduct({
                                             ...editingProduct,
-                                            categoryId: parseInt(e.target.value),
+                                            categoriaProduto_id: parseInt(e.target.value),
                                         })
                                     }
                                     className="w-full px-3 py-2 border rounded-lg"
@@ -338,25 +358,27 @@ export default function ProductManagement() {
                                     <option value="">Selecione uma categoria</option>
                                     {categories.map((category) => (
                                         <option key={category.id} value={category.id}>
-                                            {category.name}
+                                            {category.nomeCategoriaProduto}
                                         </option>
                                     ))}
                                 </select>
                             </label>
-
-
                         </div>
 
                         <div className="flex justify-end mt-4 gap-2">
                             <button
-                                onClick={() => setEditingProduct(null)}
+                                onClick={() => {
+                                    setEditingProduct(null);
+                                    setNewImageFile(null); // Limpa a imagem ao fechar
+                                }}
                                 className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleEditSave}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition"
+                                disabled={isSubmitting}
+                                className={`bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 Salvar
                             </button>
@@ -364,6 +386,7 @@ export default function ProductManagement() {
                     </div>
                 </div>
             )}
+            <ToastContainer />
         </div>
     );
 }

@@ -1,55 +1,105 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-type Category = {
-    id: number;
-    name: string;
-};
+import { type CategoriaProduto } from "../../../types/interfaces-types";
+import {
+    getAllCategoriasProdutos,
+    updateCategoriaProduto,
+    deleteCategoriaProduto
+} from "../../../services/categoriaProdutoService";
 
 export default function ProductCategoryManagment() {
-    const [categories, setCategories] = useState<Category[]>([
-        { id: 1, name: "Pizza" },
-        { id: 2, name: "Bebida" },
-        { id: 3, name: "Lanche" },
-    ]);
+    const [categories, setCategories] = useState<CategoriaProduto[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [editingCategory, setEditingCategory] = useState<CategoriaProduto | null>(null);
     const [editedName, setEditedName] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleEditClick = (category: Category) => {
-        setEditingCategory(category);
-        setEditedName(category.name);
-    };
+    const navigate = useNavigate();
 
-    const handleSaveEdit = () => {
-        if (editingCategory) {
-            setCategories((prev) =>
-                prev.map((cat) =>
-                    cat.id === editingCategory.id ? { ...cat, name: editedName } : cat
-                )
-            );
-            setEditingCategory(null);
-            setEditedName("");
+    const fetchCategories = async () => {
+        try {
+            setIsLoading(true);
+            const categoriesData = await getAllCategoriasProdutos();
+            setCategories(categoriesData);
+        } catch (err) {
+            console.error("Erro ao buscar categorias:", err);
+            setError("Não foi possível carregar as categorias.");
+            toast.error("Erro ao carregar categorias.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleDeleteClick = (id: number) => {
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const handleEditClick = (category: CategoriaProduto) => {
+        setEditingCategory(category);
+        setEditedName(category.nomeCategoriaProduto);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingCategory) return;
+        setIsSubmitting(true);
+
+        try {
+            await updateCategoriaProduto(editingCategory.id, { nomeCategoriaProduto: editedName });
+            toast.success(`Categoria "${editedName}" atualizada com sucesso.`);
+            setEditingCategory(null);
+            setEditedName("");
+            fetchCategories();
+        } catch (err) {
+            console.error("Erro ao salvar edição:", err);
+            toast.error("Erro ao salvar as alterações da categoria.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteClick = async (id: number) => {
         if (confirm("Tem certeza que deseja excluir esta categoria?")) {
-            setCategories((prev) => prev.filter((cat) => cat.id !== id));
+            try {
+                await deleteCategoriaProduto(id);
+                toast.success("Categoria excluída com sucesso.");
+                fetchCategories();
+            } catch (err) {
+                console.error("Erro ao excluir categoria:", err);
+                toast.error("Erro ao excluir a categoria.");
+            }
         }
     };
 
     const filteredCategories = categories.filter((cat) =>
-        cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+        cat.nomeCategoriaProduto.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-gray-600">Carregando categorias...</p>
+            </div>
+        );
+    }
+    
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-red-600">{error}</p>
+            </div>
+        );
+    }
 
-    const navigate = useNavigate()
 
     return (
-
         <div className="min-h-screen flex bg-gray-100">
             <title>Gerenciamento de Produtos</title>
 
@@ -76,30 +126,34 @@ export default function ProductCategoryManagment() {
                     </button>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredCategories.map((category) => (
-                            <div
-                                key={category.id}
-                                className="border border-gray-300 rounded-md p-4 flex justify-between items-center"
-                            >
-                                <span className="font-medium">{category.name}</span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleEditClick(category)}
-                                        className="p-2 rounded hover:bg-gray-100"
-                                        title="Editar"
-                                    >
-                                        <Pencil className="w-5 h-5 text-gray-600" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(category.id)}
-                                        className="p-2 rounded hover:bg-gray-100"
-                                        title="Excluir"
-                                    >
-                                        <Trash2 className="w-5 h-5 text-red-600" />
-                                    </button>
+                        {filteredCategories.length > 0 ? (
+                            filteredCategories.map((category) => (
+                                <div
+                                    key={category.id}
+                                    className="border border-gray-300 rounded-md p-4 flex justify-between items-center"
+                                >
+                                    <span className="font-medium">{category.nomeCategoriaProduto}</span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleEditClick(category)}
+                                            className="p-2 rounded hover:bg-gray-100"
+                                            title="Editar"
+                                        >
+                                            <Pencil className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteClick(category.id)}
+                                            className="p-2 rounded hover:bg-gray-100"
+                                            title="Excluir"
+                                        >
+                                            <Trash2 className="w-5 h-5 text-red-600" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-gray-500">Nenhuma categoria encontrada.</p>
+                        )}
                     </div>
 
                     {/* Modal de Edição */}
@@ -125,7 +179,8 @@ export default function ProductCategoryManagment() {
                                     </button>
                                     <button
                                         onClick={handleSaveEdit}
-                                        className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                                        disabled={isSubmitting}
+                                        className={`px-4 py-2 rounded-md text-white hover:bg-green-700 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600'}`}
                                     >
                                         Salvar
                                     </button>
@@ -135,6 +190,7 @@ export default function ProductCategoryManagment() {
                     )}
                 </div>
             </main>
+            <ToastContainer />
         </div>
     );
 }
