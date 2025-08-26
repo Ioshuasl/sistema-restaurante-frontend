@@ -1,7 +1,4 @@
 import axios from 'axios';
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 const api = axios.create({
   baseURL: 'https://projeto-backend-restaurante.lwcbm0.easypanel.host/api',
