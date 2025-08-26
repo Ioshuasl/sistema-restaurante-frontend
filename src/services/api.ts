@@ -1,22 +1,23 @@
 import axios from 'axios';
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const api = axios.create({
-  baseURL: 'http://localhost:3300/api', // URL base da sua API
+  baseURL: process.env.REACT_APP_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor para injetar o token em cada requisição
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token'); // Ou de onde você armazena
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Interceptor para tratar erros de autenticação
 api.interceptors.response.use(
   (response) => response,
   (error) => {
