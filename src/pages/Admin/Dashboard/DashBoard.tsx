@@ -84,7 +84,6 @@ export default function Dashboard() {
                 });
 
             } catch (err) {
-                console.error("Erro ao buscar dados do dashboard:", err);
                 setError("Não foi possível carregar os dados do dashboard.");
                 toast.error("Erro ao carregar dados do dashboard.");
             } finally {

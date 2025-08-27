@@ -38,7 +38,6 @@ export default function OrderManagment() {
             setCnpj(config.cnpj);
             setFormasPagamento(formasPagamento);
         } catch (err) {
-            console.error("Erro ao buscar dados:", err);
             setError("Não foi possível carregar os pedidos.");
             toast.error("Erro ao carregar os pedidos.");
         } finally {
@@ -59,7 +58,6 @@ export default function OrderManagment() {
             toast.success(`Status do pedido #${orderId} atualizado para ${newStatus}.`);
             fetchOrders();
         } catch (err) {
-            console.error("Erro ao atualizar o status do pedido:", err);
             toast.error("Erro ao atualizar o status do pedido.");
         }
     };

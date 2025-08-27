@@ -16,15 +16,9 @@ export default function Login() {
         e.preventDefault();
         setError(""); // Limpa o erro anterior
         setIsSubmitting(true);
-        
-        // Log para verificação dos dados de login
-        console.log("Tentativa de login com:", { username, password });
 
         try {
             const response = await loginUser({ username, password });
-
-            // Log da resposta de sucesso
-            console.log("Login bem-sucedido. Resposta da API:", response);
             
             // Armazenar o token no localStorage para uso futuro
             localStorage.setItem('token', response.token);
@@ -35,14 +29,10 @@ export default function Login() {
             navigate("/admin/dashboard");
 
         } catch (err: any) {
-            console.error("Erro ao fazer login:", err);
-            // Log do erro da API
             if (err.response && err.response.data && err.response.data.message) {
-                console.log("Mensagem de erro da API:", err.response.data.message);
                 setError(err.response.data.message);
                 toast.error(err.response.data.message);
             } else {
-                console.log("Erro inesperado:", err);
                 setError("Ocorreu um erro. Tente novamente.");
                 toast.error("Ocorreu um erro. Tente novamente.");
             }

@@ -30,10 +30,8 @@ export default function PaymentMethod() {
         try {
             setIsLoading(true);
             const methods = await getAllFormasPagamento();
-            console.log(methods)
             setPaymentMethods(methods);
         } catch (err) {
-            console.error("Erro ao buscar formas de pagamento:", err);
             setError("Não foi possível carregar as formas de pagamento.");
             toast.error("Erro ao carregar as formas de pagamento.");
         } finally {
@@ -61,7 +59,6 @@ export default function PaymentMethod() {
             setShowModal(false);
             fetchPaymentMethods();
         } catch (err) {
-            console.error("Erro ao adicionar forma de pagamento:", err);
             toast.error("Erro ao adicionar forma de pagamento.");
         } finally {
             setIsSubmitting(false);
@@ -91,7 +88,6 @@ export default function PaymentMethod() {
             setShowModal(false);
             fetchPaymentMethods();
         } catch (err) {
-            console.error("Erro ao atualizar forma de pagamento:", err);
             toast.error("Erro ao atualizar forma de pagamento.");
         } finally {
             setIsSubmitting(false);
@@ -106,7 +102,6 @@ export default function PaymentMethod() {
                 toast.success("Forma de pagamento excluída com sucesso.");
                 fetchPaymentMethods();
             } catch (err) {
-                console.error("Erro ao excluir forma de pagamento:", err);
                 toast.error("Erro ao excluir forma de pagamento.");
             }
         }

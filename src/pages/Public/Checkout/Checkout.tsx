@@ -65,7 +65,6 @@ export default function Checkout({
     0
   );
 
-  // CORREÇÃO: Converte explicitamente para número para evitar erros de tipo
   const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + Number(taxaEntrega);
 
   // Efeito para buscar a taxa de entrega e as formas de pagamento
@@ -76,12 +75,9 @@ export default function Checkout({
           getConfig(),
           getAllFormasPagamento(),
         ]);
-        // CORREÇÃO: Converte o valor para Number antes de definir o estado
         setTaxaEntrega(Number(config.taxaEntrega));
         setPaymentMethods(methods);
-        console.log("Dados carregados com sucesso. Tipo da taxa de entrega:", typeof Number(config.taxaEntrega), Number(config.taxaEntrega));
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
         toast.error("Erro ao carregar dados. Tente novamente.");
       } finally {
         setIsLoading(false);
@@ -134,18 +130,14 @@ export default function Checkout({
         estadoCliente: estado,
         taxaentrega: taxaEntrega
       };
-      
-      console.log("Payload do pedido a ser enviado:", orderPayload);
 
       const pedido = await createPedido(orderPayload);
-      console.log(pedido)
 
       toast.success('Pedido enviado com sucesso!');
       onConfirm();
       navigate('/pedido-confirmado', { state: { pedidoId: pedido.id } });
 
     } catch (error) {
-      console.error('Erro ao enviar pedido:', error);
       toast.error('Erro ao enviar pedido. Tente novamente.');
     } finally {
       setIsSubmitting(false);
@@ -165,7 +157,6 @@ export default function Checkout({
     if (typeof value === 'number' && !isNaN(value)) {
       return value.toFixed(2);
     }
-    console.error("Erro: valor com formato incorreto. Valor recebido:", value);
     return "Erro: valor está com formato correto";
   };
 

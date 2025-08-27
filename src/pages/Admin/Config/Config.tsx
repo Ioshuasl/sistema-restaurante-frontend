@@ -50,7 +50,6 @@ export default function Config() {
                 setEmail(configData.email);
                 setTaxaEntrega(configData.taxaEntrega.toString());
             } catch (error) {
-                console.error("Erro ao buscar configurações:", error);
                 toast.error("Erro ao carregar as configurações do sistema.");
             } finally {
                 setIsLoading(false);
@@ -97,7 +96,6 @@ export default function Config() {
             setTelefone(telefoneCompleto || "");
 
         } catch (error) {
-            console.error("Erro ao buscar CNPJ:", error);
             toast.error("Ocorreu um erro ao buscar o CNPJ.");
         }
     };
@@ -122,7 +120,6 @@ export default function Config() {
             setCidade(data.localidade || "");
             setEstado(data.uf || "");
         } catch (error) {
-            console.error("Erro ao buscar CEP:", error);
             toast.error("Ocorreu um erro ao buscar o CEP.");
         }
     };
@@ -161,7 +158,6 @@ export default function Config() {
             await updateConfig(updatedData);
             toast.success("Configurações salvas com sucesso!");
         } catch (error) {
-            console.error("Erro ao salvar configurações:", error);
             toast.error("Erro ao salvar as configurações.");
         } finally {
             setIsSubmitting(false);

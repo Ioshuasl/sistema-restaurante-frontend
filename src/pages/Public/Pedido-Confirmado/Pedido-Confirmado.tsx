@@ -20,10 +20,8 @@ export default function PedidoConfirmado() {
     const fetchConfigData = async () => {
       try {
         const config = await getConfig();
-        console.log(config.telefone)
         setTelefone(config.telefone); // Atualiza o estado com o telefone da API
       } catch (err) {
-        console.error("Erro ao carregar as configurações:", err);
         setError("Não foi possível carregar o telefone do restaurante.");
       } finally {
         setIsLoading(false);

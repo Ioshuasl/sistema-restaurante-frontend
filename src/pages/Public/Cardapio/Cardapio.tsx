@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMenu } from '../../../services/menuService'; // Importando a função de serviço
 import { type Menu, type Produto } from '../../../types/interfaces-types'; // Importando os tipos
+import { Lock } from 'lucide-react'; // Importando o ícone de cadeado
 
 // O componente agora lida com o estado do menu, carregamento e erros
 
@@ -29,7 +30,6 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         const menuData = await getMenu();
         setMenu(menuData);
       } catch (err) {
-        console.error("Erro ao buscar o menu:", err);
         setError("Não foi possível carregar o cardápio. Tente novamente mais tarde.");
       } finally {
         setIsLoading(false);
@@ -89,9 +89,17 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
     <div className="min-h-screen bg-gray-50 text-gray-800">
       <title>Cardápio Digital</title>
       {/* HEADER */}
-      <header className="bg-gradient-to-r from-red-600 to-red-500 text-white py-6 shadow-lg text-center">
+      <header className="bg-gradient-to-r from-red-600 to-red-500 text-white py-6 shadow-lg text-center relative">
         <h1 className="text-3xl font-bold tracking-wide">🍔 Cardápio Digital</h1>
         <p className="text-sm mt-1">Escolha e monte seu pedido de forma rápida e fácil</p>
+        
+        {/* Ícone de cadeado para acesso administrativo */}
+        <button
+          onClick={() => navigate('/login')}
+          className="absolute top-1/2 right-6 -translate-y-1/2 text-white hover:text-gray-200 transition hover:cursor-pointer"
+        >
+          <Lock size={24} />
+        </button>
       </header>
 
       {/* NAVBAR */}
@@ -116,7 +124,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         {!isCartOpen && (
           <button
             onClick={() => setIsCartOpen(true)}
-            className="fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded-full shadow-xl hover:bg-red-700 transition z-50"
+            className="fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded-full shadow-xl hover:bg-red-700 transition z-50 hover:cursor-pointer"
           >
             🛒 Carrinho ({cart.reduce((sum, item) => sum + item.quantity, 0)})
           </button>
@@ -149,7 +157,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                   </p>
                   <button
                     onClick={() => addToCart(product)}
-                    className="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold"
+                    className="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:cursor-pointer"
                   >
                     Adicionar ao carrinho
                   </button>
