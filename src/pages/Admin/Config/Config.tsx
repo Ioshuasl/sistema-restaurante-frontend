@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
 import { ToastContainer, toast } from 'react-toastify';
+import { IMaskInput } from 'react-imask';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { getConfig, updateConfig } from '../../../services/configService';
@@ -23,7 +24,7 @@ export default function Config() {
     const [telefone, setTelefone] = useState("");
     const [email, setEmail] = useState("");
     const [taxaEntrega, setTaxaEntrega] = useState("");
-    
+
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -81,7 +82,7 @@ export default function Config() {
             }
 
             const data = await response.json();
-            
+
             setCep(data.estabelecimento.cep || "");
             setRazaoSocial(data.razao_social || "");
             setNomeFantasia(data.estabelecimento.nome_fantasia || "");
@@ -129,7 +130,7 @@ export default function Config() {
     // Função para lidar com o envio do formulário
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!id) {
             toast.error("Não foi possível obter o ID da configuração para salvar.");
             return;
@@ -166,7 +167,7 @@ export default function Config() {
             setIsSubmitting(false);
         }
     };
-    
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -193,11 +194,12 @@ export default function Config() {
                                     <div>
                                         <label className="block mb-1 font-medium">CNPJ do Restaurante:</label>
                                         <div className="flex items-center">
-                                            <input
+                                            <IMaskInput
+                                                mask="00.000.000/0000-00"
                                                 type="text"
                                                 placeholder="Digite o CNPJ"
                                                 value={cnpj}
-                                                onChange={(e) => setCnpj(e.target.value)}
+                                                onAccept={(value, mask) => setCnpj(value)}
                                                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                                             />
                                             <button
@@ -239,11 +241,12 @@ export default function Config() {
                                     <div>
                                         <label className="block mb-1 font-medium">CEP:</label>
                                         <div className="flex items-center">
-                                            <input
+                                            <IMaskInput
+                                                mask="00000-000"
                                                 type="text"
-                                                placeholder="Digite o CEP"
+                                                placeholder="00000-000"
                                                 value={cep}
-                                                onChange={(e) => setCep(e.target.value)}
+                                                onAccept={(value, mask) => setCep(value)}
                                                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                                             />
                                             <button

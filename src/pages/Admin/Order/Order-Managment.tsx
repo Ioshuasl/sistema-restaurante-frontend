@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { BadgeCheck, Clock, XCircle, Truck, X } from "lucide-react";
+import { BadgeCheck, Clock, XCircle, Truck, X, Printer } from "lucide-react";
 import Sidebar from "../Components/Sidebar";
 import { getAllPedidos, updatePedido } from "../../../services/pedidoService";
-import { type Pedido } from "../../../types/interfaces-types";
+import { getConfig } from "../../../services/configService";
+import { getAllFormasPagamento } from "../../../services/formaPagamentoService";
+import { type Pedido, type FormaPagamento } from "../../../types/interfaces-types";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -16,15 +18,27 @@ export default function OrderManagment() {
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
+    const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+    const [taxaEntrega, setTaxaEntrega] = useState(0);
+    const [razaoSocial, setRazaoSocial] = useState("");
+    const [cnpj, setCnpj] = useState("");
+    const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
 
     const fetchOrders = async () => {
         try {
             setIsLoading(true);
-            const fetchedOrders = await getAllPedidos();
-            console.log(fetchedOrders)
+            const [fetchedOrders, config, formasPagamento] = await Promise.all([
+                getAllPedidos(),
+                getConfig(),
+                getAllFormasPagamento(),
+            ]);
             setOrders(fetchedOrders);
+            setTaxaEntrega(config.taxaEntrega);
+            setRazaoSocial(config.razaoSocial);
+            setCnpj(config.cnpj);
+            setFormasPagamento(formasPagamento);
         } catch (err) {
-            console.error("Erro ao buscar pedidos:", err);
+            console.error("Erro ao buscar dados:", err);
             setError("Não foi possível carregar os pedidos.");
             toast.error("Erro ao carregar os pedidos.");
         } finally {
@@ -43,7 +57,7 @@ export default function OrderManagment() {
         try {
             await updatePedido(orderId, { situacaoPedido: newStatus });
             toast.success(`Status do pedido #${orderId} atualizado para ${newStatus}.`);
-            fetchOrders(); // Recarrega os pedidos para exibir a alteração
+            fetchOrders();
         } catch (err) {
             console.error("Erro ao atualizar o status do pedido:", err);
             toast.error("Erro ao atualizar o status do pedido.");
@@ -52,9 +66,128 @@ export default function OrderManagment() {
 
     const openModal = (order: Pedido) => {
         setSelectedOrder(order);
-        console.log(order)
         setIsModalOpen(true);
     };
+
+    const openReceiptModal = (e: React.MouseEvent | null, order: Pedido) => {
+        if (e) e.stopPropagation();
+        setSelectedOrder(order);
+        setIsReceiptModalOpen(true);
+    }
+
+    const handlePrintReceipt = (order: Pedido) => {
+        const subtotal = calculateSubtotal(order);
+        const total = subtotal + Number(taxaEntrega);
+
+        const itemsHtml = order.itenspedidos?.map(item => `
+          <div class="item">
+              <span>${item.quantidade}x ${item.produto?.nomeProduto}</span>
+              <span>R$ ${(Number(item.precoUnitario) * item.quantidade)?.toFixed(2).replace('.', ',')}</span>
+          </div>
+      `).join('');
+
+        const receiptHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Recibo de Pedido #${order.id}</title>
+              <style>
+                  body {
+                      font-family: 'Courier New', Courier, monospace;
+                      font-size: 14px;
+                      width: 80mm;
+                      margin: 0 auto;
+                      padding: 10px;
+                  }
+                  .container {
+                      width: 100%;
+                  }
+                  .header, .footer {
+                      text-align: center;
+                      margin-bottom: 10px;
+                  }
+                  .divider {
+                      border-top: 1px dashed #000;
+                      margin: 10px 0;
+                  }
+                  .item {
+                      display: flex;
+                      justify-content: space-between;
+                      margin-bottom: 5px;
+                  }
+                  .totals {
+                      display: flex;
+                      justify-content: space-between;
+                      font-weight: bold;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h2>RECIBO DE PEDIDO</h2>
+                      <p>ID do Pedido: #${order.id}</p>
+                      <p>Data: ${new Date().toLocaleDateString()}</p>
+                      <p>Hora: ${new Date().toLocaleTimeString()}</p>
+                  </div>
+                  <div class="divider"></div>
+                  <div class="info">
+                      <p><strong>${razaoSocial}</strong></p>
+                      <p>CNPJ: ${cnpj}</p>
+                  </div>
+                  <div class="divider"></div>
+                  <div class="info">
+                      <p>Cliente: ${order.nomeCliente}</p>
+                      <p>Telefone: ${order.telefoneCliente}</p>
+                      <p>Pagamento: ${getPaymentMethodName(order.formaPagamento_id)}</p>
+                  </div>
+                  <div class="divider"></div>
+                  <div class="items">
+                      <h3>ITENS:</h3>
+                      ${itemsHtml}
+                  </div>
+                  <div class="divider"></div>
+                  <div class="totals-section">
+                      <div class="totals">
+                          <span>Subtotal:</span>
+                          <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                      <div class="totals">
+                          <span>Taxa de Entrega:</span>
+                          <span>R$ ${Number(taxaEntrega)?.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                      <div class="totals">
+                          <span>TOTAL:</span>
+                          <span>R$ ${total.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                  </div>
+                  <div class="divider"></div>
+                  <div class="footer">
+                      <p>Obrigado pelo seu pedido!</p>
+                  </div>
+              </div>
+          </body>
+          </html>
+      `;
+
+        const printWindow = window.open('', '', 'width: 80mm;');
+        if (printWindow) {
+            printWindow.document.write(receiptHtml);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        }
+    };
+
+    const calculateSubtotal = (order: Pedido) => {
+        return order.itenspedidos?.reduce((sum, item) => sum + Number(item.precoUnitario) * item.quantidade, 0) || 0;
+    };
+
+    const getPaymentMethodName = (formaPagamentoId: number | null | undefined) => {
+        const forma = formasPagamento.find(fp => fp.id === formaPagamentoId);
+        return forma ? forma.nomeFormaPagamento : "Não informado";
+    }
 
     const filteredOrders = orders.filter((order) => {
         const matchStatus = statusFilter === "todos" || order.situacaoPedido === statusFilter;
@@ -81,7 +214,7 @@ export default function OrderManagment() {
     return (
         <div className="min-h-screen flex bg-gray-100">
             <title>Gerenciamento de Pedidos</title>
-            <main className="flex flex-1 bg-gray-100">
+            <main className="flex flex-1 bg-gray-100 print:hidden">
                 <Sidebar />
                 <div className="p-6 flex-1">
                     <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Pedidos</h1>
@@ -218,6 +351,12 @@ export default function OrderManagment() {
                                                     Pedido {order.situacaoPedido}
                                                 </button>
                                             )}
+                                        <button
+                                            className="bg-gray-200 hover:bg-gray-300 text-gray-800 p-2 rounded-lg transition"
+                                            onClick={(e) => openReceiptModal(e, order)}
+                                        >
+                                            <Printer size={16} />
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -230,7 +369,7 @@ export default function OrderManagment() {
 
             {/* Modal de Detalhes do Pedido */}
             {isModalOpen && selectedOrder && (
-                <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4 print:hidden">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative ring ring-gray-200 ring-opacity-50">
                         <button
                             className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
@@ -253,7 +392,7 @@ export default function OrderManagment() {
                             </p>
                             <p>
                                 <strong>Forma de Pagamento:</strong>{" "}
-                                {selectedOrder.FormaPagamento?.nomeFormaPagamento}
+                                {getPaymentMethodName(selectedOrder.formaPagamento_id)}
                             </p>
                             <h3 className="font-semibold mt-4">Itens do Pedido:</h3>
                             <ul className="list-disc list-inside space-y-1">
@@ -291,7 +430,83 @@ export default function OrderManagment() {
                                         Cancelar
                                     </button>
                                 )}
+                                <button
+                                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition"
+                                    onClick={() => openReceiptModal(null, selectedOrder)}
+                                >
+                                    Imprimir Recibo
+                                </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Pré-visualização do Recibo */}
+            {isReceiptModalOpen && selectedOrder && (
+                <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4 print:relative print:p-0 print:flex-none print:w-auto">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative ring ring-gray-200 ring-opacity-50 print:p-0 print:w-auto print:shadow-none">
+                        {/* Conteúdo do recibo de teste */}
+                        <div className="receipt-content p-6 print:p-4 print:text-black">
+                            <div className="text-center mb-6">
+                                <h2 className="text-2xl font-bold">Recibo de Pedido</h2>
+                                <p className="text-sm text-gray-600">ID do Pedido: #{selectedOrder.id}</p>
+                                <p className="text-sm text-gray-600">Data: {new Date().toLocaleDateString()}</p>
+                                <p className="text-sm text-gray-600">Hora: {new Date().toLocaleTimeString()}</p>
+                            </div>
+                            <div className="mb-4 text-center">
+                                <h3 className="text-lg font-bold">{razaoSocial}</h3>
+                                <p className="text-sm text-gray-600">CNPJ: {cnpj}</p>
+                            </div>
+                            <div className="mb-6 border-b border-dashed border-gray-400 pb-4">
+                                <h3 className="font-semibold text-gray-700">Cliente: {selectedOrder.nomeCliente}</h3>
+                                <p className="text-sm text-gray-600">Telefone: {selectedOrder.telefoneCliente}</p>
+                                <p className="text-sm text-gray-600">Pagamento: {getPaymentMethodName(selectedOrder.formaPagamento_id)}</p>
+                            </div>
+                            <div className="mb-6">
+                                <h3 className="font-semibold text-gray-700">Itens:</h3>
+                                <ul className="space-y-2 text-sm text-gray-700">
+                                    {selectedOrder.itenspedidos?.map((item) => (
+                                        <li key={item.id} className="flex justify-between">
+                                            <span>{item.quantidade}x {item.produto?.nomeProduto}</span>
+                                            <span>R$ {(Number(item.precoUnitario) * item.quantidade)?.toFixed(2)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="border-t border-dashed border-gray-400 pt-4 text-gray-800">
+                                <div className="flex justify-between mb-2">
+                                    <span className="font-semibold">Subtotal:</span>
+                                    <span>R$ {Number(calculateSubtotal(selectedOrder))?.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold">Taxa de Entrega:</span>
+                                    <span>R$ {Number(taxaEntrega)?.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between font-bold text-lg mt-2">
+                                    <span>Total:</span>
+                                    <span>R$ {(Number(calculateSubtotal(selectedOrder)) + Number(taxaEntrega))?.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div className="text-center mt-6 text-sm text-gray-500">
+                                <p>Obrigado pelo seu pedido!</p>
+                            </div>
+                        </div>
+
+                        {/* Botões de Ação do Modal de Recibo */}
+                        <div className="flex justify-end gap-2 mt-4 print:hidden">
+                            <button
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition"
+                                onClick={() => setIsReceiptModalOpen(false)}
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition"
+                                onClick={() => handlePrintReceipt(selectedOrder)}
+                            >
+                                Imprimir
+                            </button>
                         </div>
                     </div>
                 </div>

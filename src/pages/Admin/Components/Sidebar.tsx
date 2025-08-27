@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   CreditCard,
+  PrinterIcon,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -223,6 +224,16 @@ export default function Sidebar() {
             >
               <Settings size={20} />
               Configurações
+            </Link>
+
+            {/* Configurações */}
+            <Link
+              to="/admin/relatorio"
+              className={`flex items-center gap-2 px-2 py-2 rounded ${isActive("/admin/relatorio")}`}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <PrinterIcon size={20} />
+              Relatório
             </Link>
           </nav>
         </div>
