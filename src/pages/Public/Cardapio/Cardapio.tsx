@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMenu } from '../../../services/menuService'; // Importando a função de serviço
 import { type Menu, type Produto } from '../../../types/interfaces-types'; // Importando os tipos
-import { Lock } from 'lucide-react'; // Importando o ícone de cadeado
+import { Lock, Truck, CookingPotIcon } from 'lucide-react'; // Importando o ícone de cadeado
 
 // O componente agora lida com o estado do menu, carregamento e erros
 
@@ -21,6 +21,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   // useEffect para buscar os dados do menu quando o componente é montado
@@ -85,21 +86,39 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
     );
   }
 
+  const filteredMenu = menu
+    .map(category => ({
+      ...category,
+      produtos: category.produtos.filter(product =>
+        product.nomeProduto.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }))
+    .filter(category => category.produtos.length > 0);
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800">
-      <title>Cardápio Digital</title>
+    <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+      <title>GS Sabores</title>
       {/* HEADER */}
-      <header className="bg-gradient-to-r from-red-600 to-red-500 text-white py-6 shadow-lg text-center relative">
-        <h1 className="text-3xl font-bold tracking-wide">🍔 Cardápio Digital</h1>
-        <p className="text-sm mt-1">Escolha e monte seu pedido de forma rápida e fácil</p>
-        
-        {/* Ícone de cadeado para acesso administrativo */}
-        <button
-          onClick={() => navigate('/login')}
-          className="absolute top-1/2 right-6 -translate-y-1/2 text-white hover:text-gray-200 transition hover:cursor-pointer"
-        >
-          <Lock size={24} />
-        </button>
+      <header className="bg-gradient-to-r from-red-600 to-red-500 text-white py-6 shadow-lg relative gap-2">
+        <div className='flex flex-1 justify-between items-center'>
+          <div className='max-w-7xl mx-auto px-4'>
+            <h1 className="text-3xl font-bold flex items-center justify-center gap-2 tracking-wide"><CookingPotIcon size={36} /> GS Sabores</h1>
+            <p className="text-sm mt-1 flex items-center justify-center gap-2">
+              <Truck size={16} color='yellow' /> Entregamos sabor até você!
+            </p>
+          </div>
+
+          {/* Ícone de cadeado para acesso administrativo */}
+          <div>
+            <button
+              onClick={() => navigate('/login')}
+              aria-label="Acesso administrativo"
+              className="absolute top-1/2 right-6 -translate-y-1/2 text-white hover:text-gray-200 transition hover:cursor-pointer"
+            >
+              <Lock size={24} />
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* NAVBAR */}
@@ -118,8 +137,19 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         </ul>
       </nav>
 
+      {/* INPUT DE BUSCA */}
+      <div className="px-4 py-4">
+        <input
+          type="text"
+          placeholder="Buscar produto..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-600"
+        />
+      </div>
+
       {/* MAIN */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="w-full px-4 py-8 flex-grow">
         {/* BOTÃO FLOTANTE DO CARRINHO */}
         {!isCartOpen && (
           <button
@@ -131,7 +161,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         )}
 
         {/* LISTAGEM DE CATEGORIAS */}
-        {menu.map((category) => (
+        {filteredMenu.map((category) => (
           <section key={category.id} id={category.nomeCategoriaProduto} className="mb-16 scroll-mt-32">
             <h2 className="text-2xl font-bold mb-6 text-red-600 border-b pb-2">
               {category.nomeCategoriaProduto}
@@ -245,6 +275,12 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         </aside>
 
       </main>
+
+      {/* RODAPÉ */}
+      <footer className="bg-red-600 text-white text-center">
+        <p>© 2025 GS Sabores. Todos os direitos reservados.</p>
+        <p className="text-sm mt-1">Contato: contato@gssabores.com | (11) 99999-9999</p>
+      </footer>
     </div>
   );
 }
