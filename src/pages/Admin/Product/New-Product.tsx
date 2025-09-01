@@ -4,6 +4,7 @@ import ToggleSwitch from '../Components/ToggleSwitch';
 import Sidebar from '../Components/Sidebar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { IMaskInput } from 'react-imask';
 
 import { type CategoriaProduto, type CreateProdutoPayload } from '../../../types/interfaces-types';
 import { createProduto } from '../../../services/produtoService';
@@ -17,7 +18,7 @@ export default function NewProduct() {
   const [valorProduto, setValorProduto] = useState('');
   const [categoriaProduto_id, setCategoriaProduto_id] = useState('');
   const [isAtivo, setIsAtivo] = useState(true);
-  const [imageFile, setImageFile] = useState<File | null>(null); // Alterado para File
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [categories, setCategories] = useState<CategoriaProduto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,12 +142,21 @@ export default function NewProduct() {
                 <div className='flex flex-col flex-0.5 gap-4'>
                   <label className="text-sm text-gray-600">
                     Preço:
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder='00.00'
+                    <IMaskInput
+                      mask="R$ num" // Adiciona o prefixo
+                      blocks={{
+                        num: {
+                          mask: Number,
+                          radix: ",",
+                          scale: 2,
+                          thousandsSeparator: ".",
+                          padFractionalZeros: true,
+                          normalizeZeros: true,
+                        },
+                      }}
+                      placeholder='R$ 0,00'
                       value={valorProduto}
-                      onChange={(e) => setValorProduto(e.target.value)}
+                      onAccept={(value) => setValorProduto(value)}
                       className="w-full px-3 py-2 border rounded-lg"
                     />
                   </label>

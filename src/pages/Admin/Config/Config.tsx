@@ -28,7 +28,8 @@ export default function Config() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Efeito para buscar as configurações do backend
+    const [activeTab, setActiveTab] = useState('restaurante'); // 'restaurante' ou 'taxas'
+
     useEffect(() => {
         const fetchConfig = async () => {
             try {
@@ -62,7 +63,6 @@ export default function Config() {
         return valor.replace(/\D/g, '');
     }
 
-    // Função para buscar dados do CNPJ
     const handleBuscarCNPJ = async () => {
         const cnpjFormatado = limparNumero(cnpj);
         if (cnpjFormatado.length !== 14) {
@@ -100,7 +100,6 @@ export default function Config() {
         }
     };
 
-    // Função para buscar dados do CEP
     const handleBuscarCEP = async () => {
         const cepFormatado = limparNumero(cep);
         if (cepFormatado.length !== 8) {
@@ -124,7 +123,6 @@ export default function Config() {
         }
     };
 
-    // Função para lidar com o envio do formulário
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -154,7 +152,6 @@ export default function Config() {
         };
 
         try {
-            // CORREÇÃO: Chama a função de serviço com o payload, sem o id
             await updateConfig(updatedData);
             toast.success("Configurações salvas com sucesso!");
         } catch (error) {
@@ -182,206 +179,146 @@ export default function Config() {
                     <div className="flex flex-col flex-1 bg-white rounded-lg shadow-lg p-6 mx-auto">
                         <h1 className="text-2xl font-bold mb-4">Configurações do Sistema</h1>
 
+                        <div className="border-b border-gray-200 mb-6">
+                            <nav className="flex space-x-4" aria-label="Tabs">
+                                <button
+                                    onClick={() => setActiveTab('restaurante')}
+                                    className={`px-3 py-2 font-medium text-sm rounded-t-lg ${activeTab === 'restaurante' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Dados do Restaurante
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('taxas')}
+                                    className={`px-3 py-2 font-medium text-sm rounded-t-lg ${activeTab === 'taxas' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Taxas
+                                </button>
+                            </nav>
+                        </div>
+
                         <form onSubmit={handleSubmit}>
-                            {/* Seção: Dados do Restaurante */}
-                            <div className="mb-6">
-                                <h2 className="text-lg font-semibold mb-2">Dados do Restaurante</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block mb-1 font-medium">CNPJ do Restaurante:</label>
-                                        <div className="flex items-center">
-                                            <IMaskInput
-                                                mask="00.000.000/0000-00"
-                                                type="text"
-                                                placeholder="Digite o CNPJ"
-                                                value={cnpj}
-                                                onAccept={(value, mask) => setCnpj(value)}
-                                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={handleBuscarCNPJ}
-                                                className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition"
-                                            >
-                                                Buscar
-                                            </button>
+                            <div className={activeTab === 'restaurante' ? 'block' : 'hidden'}>
+                                {/* Seção: Dados do Restaurante */}
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-semibold mb-2">Dados do Restaurante</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block mb-1 font-medium">CNPJ do Restaurante:</label>
+                                            <div className="flex items-center">
+                                                <IMaskInput
+                                                    mask="00.000.000/0000-00"
+                                                    type="text"
+                                                    placeholder="Digite o CNPJ"
+                                                    value={cnpj}
+                                                    onAccept={(value) => setCnpj(value)}
+                                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                />
+                                                <button type="button" onClick={handleBuscarCNPJ} className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition">
+                                                    Buscar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Razão Social:</label>
+                                            <input type="text" placeholder="Digite o nome" value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Nome Fantasia:</label>
+                                            <input type="text" placeholder="Digite o nome" value={nomeFantasia} onChange={(e) => setNomeFantasia(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Razão Social:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Digite o nome"
-                                            value={razaoSocial}
-                                            onChange={(e) => setRazaoSocial(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Nome Fantasia:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Digite o nome"
-                                            value={nomeFantasia}
-                                            onChange={(e) => setNomeFantasia(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Seção: Endereço Detalhado */}
-                            <div className="mb-6">
-                                <h2 className="text-lg font-semibold mb-2">Endereço Detalhado</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block mb-1 font-medium">CEP:</label>
-                                        <div className="flex items-center">
-                                            <IMaskInput
-                                                mask="00000-000"
-                                                type="text"
-                                                placeholder="00000-000"
-                                                value={cep}
-                                                onAccept={(value, mask) => setCep(value)}
-                                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={handleBuscarCEP}
-                                                className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition"
-                                            >
-                                                Buscar
-                                            </button>
+                                {/* Seção: Endereço Detalhado */}
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-semibold mb-2">Endereço Detalhado</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block mb-1 font-medium">CEP:</label>
+                                            <div className="flex items-center">
+                                                <IMaskInput
+                                                    mask="00000-000"
+                                                    type="text"
+                                                    placeholder="00000-000"
+                                                    value={cep}
+                                                    onAccept={(value) => setCep(value)}
+                                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                />
+                                                <button type="button" onClick={handleBuscarCEP} className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition">
+                                                    Buscar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Tipo do Logradouro:</label>
+                                            <input type="text" placeholder="Ex: Rua, Avenida..." value={tipoLogadouro} onChange={(e) => setTipoLogadouro(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Logradouro:</label>
+                                            <input type="text" placeholder="Ex: Rua, Avenida..." value={logadouro} onChange={(e) => setLogadouro(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Número:</label>
+                                            <input type="text" placeholder="Ex: 123" value={numero} onChange={(e) => setNumero(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Quadra:</label>
+                                            <input type="text" placeholder="Ex: 10" value={quadra} onChange={(e) => setQuadra(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Lote:</label>
+                                            <input type="text" placeholder="Ex: 25" value={lote} onChange={(e) => setLote(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Bairro:</label>
+                                            <input type="text" placeholder="Ex: Centro" value={bairro} onChange={(e) => setBairro(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Cidade:</label>
+                                            <input type="text" placeholder="Ex: São Paulo" value={cidade} onChange={(e) => setCidade(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Estado:</label>
+                                            <input type="text" placeholder="Ex: SP" value={estado} onChange={(e) => setEstado(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Tipo do Logradouro:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: Rua, Avenida..."
-                                            value={tipoLogadouro}
-                                            onChange={(e) => setTipoLogadouro(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
+                                </div>
+
+                                {/* Seção: Contato */}
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-semibold mb-2">Contato</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block mb-1 font-medium">Telefone:</label>
+                                            <input type="text" placeholder="Digite o telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block mb-1 font-medium">Email:</label>
+                                            <input type="email" placeholder="Digite o email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className={activeTab === 'taxas' ? 'block' : 'hidden'}>
+                                {/* Seção: Taxa de Entrega */}
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-semibold mb-2">Taxa de Entrega</h2>
                                     <div>
-                                        <label className="block mb-1 font-medium">Logradouro:</label>
+                                        <label className="block mb-1 font-medium">Taxa de Entrega:</label>
                                         <input
-                                            type="text"
-                                            placeholder="Ex: Rua, Avenida..."
-                                            value={logadouro}
-                                            onChange={(e) => setLogadouro(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Número:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: 123"
-                                            value={numero}
-                                            onChange={(e) => setNumero(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Quadra:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: 10"
-                                            value={quadra}
-                                            onChange={(e) => setQuadra(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Lote:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: 25"
-                                            value={lote}
-                                            onChange={(e) => setLote(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Bairro:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: Centro"
-                                            value={bairro}
-                                            onChange={(e) => setBairro(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Cidade:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: São Paulo"
-                                            value={cidade}
-                                            onChange={(e) => setCidade(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Estado:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: SP"
-                                            value={estado}
-                                            onChange={(e) => setEstado(e.target.value)}
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="Digite a taxa de Entrega (ex.: 5.00)"
+                                            value={taxaEntrega}
+                                            onChange={(e) => setTaxaEntrega(e.target.value)}
                                             className="w-full border border-gray-300 rounded-md px-3 py-2"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Seção: Contato */}
-                            <div className="mb-6">
-                                <h2 className="text-lg font-semibold mb-2">Contato</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block mb-1 font-medium">Telefone:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Digite o telefone"
-                                            value={telefone}
-                                            onChange={(e) => setTelefone(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Email:</label>
-                                        <input
-                                            type="email"
-                                            placeholder="Digite o email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Seção: Taxa de Entrega */}
-                            <div className="mb-6">
-                                <h2 className="text-lg font-semibold mb-2">Taxa de Entrega</h2>
-                                <div>
-                                    <label className="block mb-1 font-medium">Taxa de Entrega:</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="Digite a taxa de Entrega (ex.: 5.00)"
-                                        value={taxaEntrega}
-                                        onChange={(e) => setTaxaEntrega(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Botão Salvar */}
-                            <div className="flex justify-end">
+                            <div className="flex justify-end mt-6">
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}

@@ -5,7 +5,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function Login() {
-    // CORREÇÃO: Usando 'username' em vez de 'email' para refletir a API
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -14,17 +13,17 @@ export default function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(""); // Limpa o erro anterior
+
+        setError("");
         setIsSubmitting(true);
 
         try {
             const response = await loginUser({ username, password });
+            console.log(response.message);
             
-            // Armazenar o token no localStorage para uso futuro
             localStorage.setItem('token', response.token);
-            localStorage.setItem('user', JSON.stringify(response.user)); // Armazena como string JSON
+            localStorage.setItem('user', JSON.stringify(response.user));
             
-            // Exibe mensagem de sucesso e redireciona
             toast.success("Login realizado com sucesso!");
             navigate("/admin/dashboard");
 
@@ -48,13 +47,13 @@ export default function Login() {
                     Acesso Administrativo
                 </h2>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                {/* VERIFIQUE ESTA LINHA COM ATENÇÃO */}
+                <form className="space-y-4" onSubmit={handleSubmit}>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
                             Usuário
                         </label>
                         <input
-                            // CORREÇÃO: Tipo 'text' em vez de 'email'
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -79,6 +78,7 @@ export default function Login() {
                         <div className="mb-4 text-red-600 text-sm text-center">{error}</div>
                     )}
 
+                    {/* E VERIFIQUE ESTAS LINHAS TAMBÉM */}
                     <button
                         type="submit"
                         disabled={isSubmitting}

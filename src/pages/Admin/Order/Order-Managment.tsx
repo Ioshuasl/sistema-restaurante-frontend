@@ -350,10 +350,10 @@ export default function OrderManagment() {
                                                 </button>
                                             )}
                                         <button
-                                            className="bg-gray-200 hover:bg-gray-300 text-gray-800 p-2 rounded-lg transition"
+                                            className="flex flex-1 items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 p-2 rounded-lg transition"
                                             onClick={(e) => openReceiptModal(e, order)}
                                         >
-                                            <Printer size={16} />
+                                            <Printer size={16} /> Imprimir
                                         </button>
                                     </div>
                                 </div>
