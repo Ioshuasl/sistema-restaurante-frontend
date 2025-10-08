@@ -98,38 +98,15 @@ export default function Sidebar() {
             </Link>
 
             {/* Produto */}
-            <div>
-              <button
-                onClick={() => toggleMenu("product")}
-                className="flex text-gray-700 items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
-              >
-                <Package size={20} />
-                Produto
-                {openMenus.includes("product") ? (
-                  <ChevronDown size={18} className="ml-auto" />
-                ) : (
-                  <ChevronRight size={18} className="ml-auto" />
-                )}
-              </button>
-              {openMenus.includes("product") && (
-                <div className="ml-6 flex flex-col gap-2">
-                  <Link
-                    to="/admin/product/consult"
-                    className={isActive("/admin/product/consult")}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    Gerenciar Produtos
-                  </Link>
-                  <Link
-                    to="/admin/product/new"
-                    className={isActive("/admin/product/new")}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    Cadastrar Produto
-                  </Link>
-                </div>
-              )}
-            </div>
+
+            <Link
+              to="/admin/product"
+              className={`flex items-center gap-2 px-2 py-2 rounded ${isActive("/admin/order")}`}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <Package size={20} />
+              Produto
+            </Link>
 
             {/* Categoria de Produto */}
             <div>

@@ -8,7 +8,6 @@ import PedidoConfirmado from "./pages/Public/Pedido-Confirmado/Pedido-Confirmado
 import Login from "./pages/Auth/Login/Login";
 import Dashboard from "./pages/Admin/Dashboard/DashBoard";
 import OrderManagment from "./pages/Admin/Order/Order-Managment";
-import NewProduct from "./pages/Admin/Product/New-Product";
 import ProductManagment from "./pages/Admin/Product/Product-Managment";
 import NewProductCategory from "./pages/Admin/Product-Category/New-Product-Category";
 import NewUser from "./pages/Admin/Users/New-User";
@@ -17,13 +16,9 @@ import ProductCategoryManagment from "./pages/Admin/Product-Category/Product-Cat
 import Config from "./pages/Admin/Config/Config";
 import RoleManagment from "./pages/Admin/Users/Role-Managment";
 import PaymentMethod from "./pages/Admin/Payment-Method/Payment-Method";
-import { type Produto } from './types/interfaces-types';
+import { type Produto, type SubProduto, type CartItem } from './types/interfaces-types';
 
 // Tipo CartItem agora usa o tipo Produto vindo da sua API
-type CartItem = {
-  product: Produto;
-  quantity: number;
-};
 
 export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -92,11 +87,7 @@ export default function App() {
         element={<OrderManagment/>}
       />
       <Route
-        path="/admin/product/new"
-        element={<NewProduct/>}
-      />
-      <Route
-        path="/admin/product/consult"
+        path="/admin/product"
         element={<ProductManagment/>}
       />
       <Route

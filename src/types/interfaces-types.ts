@@ -146,6 +146,22 @@ export interface CreateCategoriaProdutoPayload {
 export interface UpdateCategoriaProdutoPayload {
   nomeCategoriaProduto?: string;
 }
+export interface SubProduto {
+  id: number;
+  nomeSubProduto: string;
+  isAtivo: boolean;
+  valorAdicional: number;
+  produto_id: number;
+}
+
+export interface SubItemPedido {
+  id: number;                 // O ID único do registro do sub-item no pedido
+  nomeSubProduto: string;     // O nome do sub-produto (ex: "Bacon extra")
+  valorAdicional: number;     // O valor que este sub-item adiciona ao produto principal
+  // Você também pode incluir outras chaves estrangeiras se sua API as retornar:
+  // itempedido_id?: number; 
+  // subproduto_id?: number;
+}
 
 export interface Produto {
   id: number;
@@ -158,6 +174,21 @@ export interface Produto {
   updatedAt: string;
   CategoriaProduto?: CategoriaProduto; // Relação opcional com o tipo CategoriaProduto
   ItemPedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
+  subprodutos?: SubProduto[];
+}
+
+export interface CreateSubProdutoPayload {
+  nomeSubProduto: string;
+  valorSubProduto: number;
+  isAtivo: boolean;
+  produto_id: number;
+}
+
+export interface UpdateSubProdutoPayload {
+  nomeSubProduto?: string;
+  valorSubProduto?: number;
+  isAtivo: boolean;
+  produto_id?: number;
 }
 
 export interface CreateProdutoPayload {
@@ -200,7 +231,7 @@ export interface Pedido {
   createdAt: string;
   updatedAt: string;
   FormaPagamento?: FormaPagamento; // Relação opcional com o tipo FormaPagamento
-  itenspedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
+  itensPedido?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
 }
 
 export interface ItemPedido {
@@ -211,14 +242,20 @@ export interface ItemPedido {
   precoUnitario: number;
   createdAt: string;
   updatedAt: string;
-  produto?: Produto; // Relação opcional com o tipo Produto
+  produto?: Produto;
+  subItensPedido?: SubItemPedido[];  // novo relacionamento opcional
 }
 
 export interface ProdutoPedidoPayload {
   produtoId: number;
   quantidade: number;
+  subProdutos?: SubProdutoPedidoPayload[];  // opcional, lista de subprodutos para esse item
 }
 
+export interface SubProdutoPedidoPayload {
+  subProdutoId: number;
+  quantidade: number;
+}
 export interface CreatePedidoPayload {
   produtosPedido: ProdutoPedidoPayload[];
   formaPagamento_id: number;
@@ -278,3 +315,11 @@ export interface PaymentDistribution {
   label: string;
   value: number;
 }
+
+export type CartItem = {
+    cartItemId: string;
+    product: Produto;
+    quantity: number;
+    selectedSubProducts: SubProduto[];
+    unitPriceWithSubProducts: number;
+};

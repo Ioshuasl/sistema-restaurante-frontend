@@ -228,7 +228,7 @@ export default function RoleManagment() {
 
             {/* Modal Novo Cargo */}
             {isModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center bg-transparent backdrop-blur-sm z-50">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">Cadastrar Novo Cargo</h2>
@@ -279,7 +279,7 @@ export default function RoleManagment() {
 
             {/* Modal Editar Cargo */}
             {cargoBeingEdited && (
-                <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">Editar Cargo</h2>
