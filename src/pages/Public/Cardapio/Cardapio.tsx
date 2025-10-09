@@ -152,7 +152,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                         <button
                             onClick={() => navigate('/login')}
                             aria-label="Acesso administrativo"
-                            className="absolute top-1/2 right-6 -translate-y-1/2 text-white hover:text-gray-200 transition"
+                            className="absolute top-1/2 right-6 cursor-pointer -translate-y-1/2 text-white hover:text-gray-200 transition"
                         >
                             <Lock size={24} />
                         </button>
@@ -199,7 +199,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {category.produtos.map((product) => (
-                                <div key={product.id} className="bg-white rounded-2xl shadow-md p-5 flex flex-col items-center text-center hover:shadow-xl transition">
+                                <div key={product.id} className="bg-white rounded-2xl border border-gray-300 shadow-xl p-5 flex flex-col items-center text-center hover:shadow-xl transition">
                                     <img src={product.image} alt={product.nomeProduto} className="w-32 h-32 object-cover rounded-xl mb-3" />
                                     <h3 className="text-lg font-semibold">{product.nomeProduto}</h3>
                                     <p className="text-red-600 font-bold text-lg mt-2">
@@ -208,7 +208,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                                     </p>
                                     <button
                                         onClick={() => handleAddToCartClick(product)}
-                                        className="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-105"
+                                        className="mt-4 bg-red-500 cursor-pointer hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-105"
                                     >
                                         {product.subprodutos && product.subprodutos.length > 0 ? 'Selecionar Opções' : 'Adicionar ao carrinho'}
                                     </button>
@@ -219,7 +219,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                 ))}
 
                 <aside className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl rounded-l-2xl z-50 transition-transform duration-300 ease-in-out flex flex-col ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="flex justify-between items-center px-6 py-5 border-b">
+                    <div className="flex justify-between items-center px-6 py-5">
                         <h2 className="text-xl font-bold flex items-center gap-2"><span className="text-red-600">🛒</span> Seu Carrinho</h2>
                         <button onClick={() => setIsCartOpen(false)} className="text-gray-600 hover:text-red-600 text-2xl">&times;</button>
                     </div>
@@ -229,7 +229,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                             <p className="text-gray-500 text-center mt-10">Seu carrinho está vazio.</p>
                         ) : (
                             cart.map((item) => (
-                                <div key={item.cartItemId} className="flex gap-4 p-3 shadow-sm rounded-lg border">
+                                <div key={item.cartItemId} className="flex gap-4 p-3 shadow-md rounded-lg border border-gray-300">
                                     <img src={item.product.image} alt={item.product.nomeProduto} className="w-16 h-16 object-cover rounded-md" />
                                     <div className="flex-1">
                                         <h3 className="font-medium">{item.product.nomeProduto}</h3>
@@ -252,7 +252,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                         )}
                     </div>
 
-                    <div className="border-t p-6">
+                    <div className="border-t border-gray-300 p-6">
                         <div className="flex justify-between items-center mb-4">
                             <span className="text-lg font-semibold">Total:</span>
                             <span className="text-xl font-bold text-blue-600">R$ {cartTotal.toFixed(2)}</span>

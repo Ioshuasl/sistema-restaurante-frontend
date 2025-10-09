@@ -89,6 +89,9 @@ export interface Config {
   taxaEntrega: number;
   createdAt: string;
   updatedAt: string;
+  evolutionInstanceName: string;
+  urlAgenteImpressao: string;
+  nomeImpressora: string;
 }
 
 export interface UpdateConfigPayload {
@@ -107,6 +110,9 @@ export interface UpdateConfigPayload {
   telefone?: string;
   email?: string;
   taxaEntrega?: number;
+  evolutionInstanceName: string;
+  urlAgenteImpressao: string;
+  nomeImpressora: string;
 }
 
 
@@ -155,12 +161,11 @@ export interface SubProduto {
 }
 
 export interface SubItemPedido {
+  precoAdicional(precoAdicional: any): unknown;
+  subproduto: any;
   id: number;                 // O ID único do registro do sub-item no pedido
   nomeSubProduto: string;     // O nome do sub-produto (ex: "Bacon extra")
   valorAdicional: number;     // O valor que este sub-item adiciona ao produto principal
-  // Você também pode incluir outras chaves estrangeiras se sua API as retornar:
-  // itempedido_id?: number; 
-  // subproduto_id?: number;
 }
 
 export interface Produto {
@@ -209,7 +214,7 @@ export interface UpdateProdutoPayload {
 
 
 // --- Pedido e Itens de Pedido ---
-type situacaoPedido = 'preparando'|'entrega'|'finalizado'|'cancelado'
+type situacaoPedido = 'preparando' | 'entrega' | 'finalizado' | 'cancelado'
 
 export interface Pedido {
   id: number;
@@ -261,7 +266,7 @@ export interface CreatePedidoPayload {
   formaPagamento_id: number;
   situacaoPedido: string;
   isRetiradaEstabelecimento: boolean;
-  taxaentrega: number;
+  taxaEntrega: number;
   nomeCliente: string;
   telefoneCliente: string;
   cepCliente: string;
@@ -317,9 +322,9 @@ export interface PaymentDistribution {
 }
 
 export type CartItem = {
-    cartItemId: string;
-    product: Produto;
-    quantity: number;
-    selectedSubProducts: SubProduto[];
-    unitPriceWithSubProducts: number;
+  cartItemId: string;
+  product: Produto;
+  quantity: number;
+  selectedSubProducts: SubProduto[];
+  unitPriceWithSubProducts: number;
 };

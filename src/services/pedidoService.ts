@@ -6,6 +6,11 @@ export const createPedido = async (payload: CreatePedidoPayload): Promise<Pedido
   return response.data;
 };
 
+export const printPedido = async (id: number) => {
+  const response = await api.post(`/pedido/${id}/print`);
+  return response.data
+}
+
 export const getAllPedidos = async (): Promise<Pedido[]> => {
   const response = await api.get('/pedido');
   console.log(response.data)

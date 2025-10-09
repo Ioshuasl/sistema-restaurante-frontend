@@ -3,6 +3,7 @@ import Sidebar from "../Components/Sidebar";
 import { ToastContainer, toast } from 'react-toastify';
 import { IMaskInput } from 'react-imask';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from "axios";
 
 import { getConfig, updateConfig } from '../../../services/configService';
 import { type UpdateConfigPayload } from '../../../types/interfaces-types';
@@ -24,11 +25,17 @@ export default function Config() {
     const [telefone, setTelefone] = useState("");
     const [email, setEmail] = useState("");
     const [taxaEntrega, setTaxaEntrega] = useState("");
+    const [evolutionInstanceName, setEvolutionInstanceName] = useState("");
+    const [urlAgenteImpressao, setUrlAgenteImpressao] = useState("");
+    const [nomeImpressora, setNomeImpressora] = useState("");
+    const [printers, setPrinters] = useState<{ name: string; isDefault?: boolean }[]>([]);
+    const [isFetchingPrinters, setIsFetchingPrinters] = useState(false);
+
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [activeTab, setActiveTab] = useState('restaurante'); // 'restaurante' ou 'taxas'
+    const [activeTab, setActiveTab] = useState('restaurante'); // 'restaurante', 'taxas', 'whatsapp', 'impressao'
 
     useEffect(() => {
         const fetchConfig = async () => {
@@ -50,6 +57,9 @@ export default function Config() {
                 setTelefone(configData.telefone);
                 setEmail(configData.email);
                 setTaxaEntrega(configData.taxaEntrega.toString());
+                setEvolutionInstanceName(configData.evolutionInstanceName);
+                setUrlAgenteImpressao(configData.urlAgenteImpressao);
+                setNomeImpressora(configData.nomeImpressora);
             } catch (error) {
                 toast.error("Erro ao carregar as configurações do sistema.");
             } finally {
@@ -123,6 +133,24 @@ export default function Config() {
         }
     };
 
+    const handleBuscarImpressoras = async () => {
+        if (!urlAgenteImpressao) {
+            toast.error("Informe a URL do agente de impressão antes de buscar.");
+            return;
+        }
+
+        setIsFetchingPrinters(true);
+        try {
+            const response = await axios.get(`${urlAgenteImpressao}/printers`);
+            setPrinters(response.data);
+            toast.success("Impressoras carregadas com sucesso!");
+        } catch (error) {
+            toast.error("Erro ao buscar impressoras. Verifique se o agente está ativo.");
+        } finally {
+            setIsFetchingPrinters(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -149,6 +177,9 @@ export default function Config() {
             telefone,
             email,
             taxaEntrega: parseFloat(taxaEntrega),
+            evolutionInstanceName,
+            urlAgenteImpressao,
+            nomeImpressora
         };
 
         try {
@@ -192,6 +223,18 @@ export default function Config() {
                                     className={`px-3 py-2 font-medium text-sm rounded-t-lg ${activeTab === 'taxas' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Taxas
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('whatsapp')}
+                                    className={`px-3 py-2 font-medium text-sm rounded-t-lg ${activeTab === 'whatsapp' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Whatsapp
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('impressao')}
+                                    className={`px-3 py-2 font-medium text-sm rounded-t-lg ${activeTab === 'impressao' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    Impressão
                                 </button>
                             </nav>
                         </div>
@@ -317,6 +360,86 @@ export default function Config() {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className={activeTab === 'whatsapp' ? 'block' : 'hidden'}>
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-semibold mb-2">Configuração WhatsApp</h2>
+                                    <div>
+                                        <label className="block mb-1 font-medium">Nome da Instância usada na Evolution Api:</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Digite o número do WhatsApp"
+                                            value={evolutionInstanceName}
+                                            onChange={(e) => setEvolutionInstanceName(e.target.value)}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={activeTab === 'impressao' ? 'block' : 'hidden'}>
+                                <div className="mb-6">
+                                    <h2 className="text-lg font-semibold mb-2">Configuração de Impressão</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block mb-1 font-medium">URL do Agente Local:</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ex: http://192.168.0.100:4000"
+                                                value={urlAgenteImpressao}
+                                                onChange={(e) => setUrlAgenteImpressao(e.target.value)}
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                            />
+                                        </div>
+                                        <div className="flex items-end">
+                                            <button
+                                                type="button"
+                                                onClick={handleBuscarImpressoras}
+                                                disabled={isFetchingPrinters}
+                                                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition ${isFetchingPrinters ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                {isFetchingPrinters ? "Buscando..." : "Buscar Impressoras"}
+                                            </button>
+                                        </div>
+
+                                        {/* Exibe o nome da impressora selecionada, se houver */}
+                                        {nomeImpressora && printers.length === 0 && (
+                                            <div>    
+                                                <label className="block mb-1 font-medium">Impressora selecionada:</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ex: http://192.168.0.100:4000"
+                                                    value={nomeImpressora}
+                                                    readOnly
+                                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {printers.length > 0 && (
+                                            <div>
+                                                <label className="block mb-1 font-medium">Selecione uma Impressora:</label>
+                                                <select
+                                                    value={nomeImpressora}
+                                                    onChange={(e) => setNomeImpressora(e.target.value)}
+                                                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                >
+                                                    <option value="">Selecione...</option>
+                                                    {printers.map((printer) => (
+                                                        <option key={printer.name} value={printer.name}>
+                                                            {printer.name} {printer.isDefault ? "(Padrão)" : ""}
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+
 
                             <div className="flex justify-end mt-6">
                                 <button

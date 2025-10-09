@@ -101,7 +101,7 @@ export default function Sidebar() {
 
             <Link
               to="/admin/product"
-              className={`flex items-center gap-2 px-2 py-2 rounded ${isActive("/admin/order")}`}
+              className={`flex items-center gap-2 px-2 py-2 rounded ${isActive("/admin/product")}`}
               onClick={() => setIsSidebarOpen(false)}
             >
               <Package size={20} />
@@ -109,38 +109,14 @@ export default function Sidebar() {
             </Link>
 
             {/* Categoria de Produto */}
-            <div>
-              <button
-                onClick={() => toggleMenu("category")}
-                className="flex text-gray-700 items-center gap-2 w-full text-left px-2 py-2 rounded hover:text-indigo-600"
-              >
-                <Package size={20} />
-                Categoria de Produto
-                {openMenus.includes("category") ? (
-                  <ChevronDown size={18} className="ml-auto" />
-                ) : (
-                  <ChevronRight size={18} className="ml-auto" />
-                )}
-              </button>
-              {openMenus.includes("category") && (
-                <div className="ml-6 flex flex-col gap-2">
-                  <Link
-                    to="/admin/category-product"
-                    className={isActive("/admin/category-product/consult")}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    Gerenciar Categorias
-                  </Link>
-                  <Link
-                    to="/admin/category-product/new"
-                    className={isActive("/admin/category-product/new")}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    Cadastrar Categoria
-                  </Link>
-                </div>
-              )}
-            </div>
+            <Link
+              to="/admin/category-product"
+              className={`flex items-center gap-2 px-2 py-2 rounded ${isActive("/admin/category-product")}`}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <Package size={20} />
+              Categoria de Produto
+            </Link>
 
             {/*Forma de Pagamento*/}
             <Link
