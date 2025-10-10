@@ -142,6 +142,7 @@ export default function Config() {
         setIsFetchingPrinters(true);
         try {
             const response = await axios.get(`${urlAgenteImpressao}/printers`);
+            console.log("resposta das impressoras",response.data)
             setPrinters(response.data);
             toast.success("Impressoras carregadas com sucesso!");
         } catch (error) {
