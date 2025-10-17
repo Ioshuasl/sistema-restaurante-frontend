@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import axios from "axios";
 
 import { getConfig, updateConfig } from '../../../services/configService';
+import { connectInstance } from "@/functions/instanceConnect";
 import { type UpdateConfigPayload } from '../../../types/interfaces-types';
 
 export default function Config() {
@@ -30,7 +31,9 @@ export default function Config() {
     const [nomeImpressora, setNomeImpressora] = useState("");
     const [printers, setPrinters] = useState<{ name: string; isDefault?: boolean }[]>([]);
     const [isFetchingPrinters, setIsFetchingPrinters] = useState(false);
-
+    const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+    const [isConnectingInstance, setIsConnectingInstance] = useState(false);
+    // --- FIM DOS NOVOS ESTADOS ---
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +61,7 @@ export default function Config() {
                 setEmail(configData.email);
                 setTaxaEntrega(configData.taxaEntrega.toString());
                 setEvolutionInstanceName(configData.evolutionInstanceName);
+
                 setUrlAgenteImpressao(configData.urlAgenteImpressao);
                 setNomeImpressora(configData.nomeImpressora);
             } catch (error) {
@@ -69,6 +73,7 @@ export default function Config() {
         fetchConfig();
     }, []);
 
+    // ... (funções existentes - limparNumero, handleBuscarCNPJ, etc. - sem alteração)
     function limparNumero(valor: string) {
         return valor.replace(/\D/g, '');
     }
@@ -158,6 +163,41 @@ export default function Config() {
         }
     };
 
+    // --- NOVA FUNÇÃO PARA CONECTAR A INSTÂNCIA ---
+    const handleConnectInstance = async () => {
+        if (!evolutionInstanceName) {
+            toast.error("Preencha o Nome da Instância para conectar.");
+            return;
+        }
+
+        setIsConnectingInstance(true);
+        setQrCodeBase64(null); // Limpa o QR Code anterior
+
+        try {
+            const connectionData = await connectInstance({
+                serverUrl: 'https://projeto-evolution-api.lwcbm0.easypanel.host',
+                instanceName: evolutionInstanceName,
+                apikey: '429683C4C977415CAAFCCE10F7D57E11',
+            });
+
+            console.log(connectionData)
+
+            if (connectionData && connectionData.base64) {
+                setQrCodeBase64(connectionData.base64);
+                toast.info("Leia o QR Code com o aplicativo do WhatsApp.");
+            } else {
+                // Pode haver casos onde a instância já está conectada
+                toast.warn("Não foi possível obter o QR Code. A instância já pode estar conectada.");
+            }
+        } catch (error) {
+            toast.error("Falha ao tentar conectar à instância.");
+        } finally {
+            setIsConnectingInstance(false);
+        }
+    };
+    // --- FIM DA NOVA FUNÇÃO ---
+
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -190,6 +230,7 @@ export default function Config() {
         };
 
         try {
+            // Lembre-se de atualizar o backend para receber e salvar 'evolutionServerUrl' e 'evolutionApiKey'
             await updateConfig(updatedData);
             toast.success("Configurações salvas com sucesso!");
         } catch (error) {
@@ -209,6 +250,7 @@ export default function Config() {
 
     return (
         <div className="min-h-screen flex bg-gray-100">
+            {/* ... (cabeçalho e abas - sem alteração) ... */}
             <title>Configurações do Sistema</title>
             <main className="flex flex-1 bg-gray-100">
                 <Sidebar />
@@ -245,8 +287,9 @@ export default function Config() {
                                 </button>
                             </nav>
                         </div>
-
+                        
                         <form onSubmit={handleSubmit}>
+                            {/* ... (aba 'restaurante' e 'taxas' - sem alteração) ... */}
                             <div className={activeTab === 'restaurante' ? 'block' : 'hidden'}>
                                 {/* Seção: Dados do Restaurante */}
                                 <div className="mb-6">
@@ -367,23 +410,53 @@ export default function Config() {
                                     </div>
                                 </div>
                             </div>
-
+                            
+                            {/* --- ABA WHATSAPP - MODIFICADA --- */}
                             <div className={activeTab === 'whatsapp' ? 'block' : 'hidden'}>
                                 <div className="mb-6">
-                                    <h2 className="text-lg font-semibold mb-2">Configuração WhatsApp</h2>
-                                    <div>
-                                        <label className="block mb-1 font-medium">Nome da Instância usada na Evolution Api:</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Digite o número do WhatsApp"
-                                            value={evolutionInstanceName}
-                                            onChange={(e) => setEvolutionInstanceName(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                        />
+                                    <h2 className="text-lg font-semibold mb-2">Configuração WhatsApp (Evolution API)</h2>
+
+                                    {/* CAMPO EXISTENTE MODIFICADO PARA INCLUIR BOTÃO */}
+                                    <div className="mt-4">
+                                        <label className="block mb-1 font-medium">Nome da Instância:</label>
+                                        <div className="flex items-center">
+                                            <input
+                                                type="text"
+                                                placeholder="Ex: my-instance"
+                                                value={evolutionInstanceName}
+                                                onChange={(e) => setEvolutionInstanceName(e.target.value)}
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleConnectInstance}
+                                                disabled={isConnectingInstance}
+                                                className={`ml-2 whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition ${isConnectingInstance ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                {isConnectingInstance ? "Conectando..." : "Conectar"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* NOVA SEÇÃO PARA EXIBIR QR CODE */}
+                                    <div className="mt-6 flex flex-col items-center justify-center">
+                                        {isConnectingInstance && <p className="text-gray-600">Gerando QR Code, aguarde...</p>}
+                                        {qrCodeBase64 && (
+                                            <div className="text-center">
+                                                <h3 className="text-md font-semibold mb-2">Escaneie para conectar o WhatsApp</h3>
+                                                <img 
+                                                    src={qrCodeBase64} 
+                                                    alt="QR Code para conectar WhatsApp"
+                                                    className="border rounded-lg shadow-md"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+                            {/* --- FIM DA ABA WHATSAPP --- */}
 
+                            {/* ... (aba 'impressao' - sem alteração) ... */}
                             <div className={activeTab === 'impressao' ? 'block' : 'hidden'}>
                                 <div className="mb-6">
                                     <h2 className="text-lg font-semibold mb-2">Configuração de Impressão</h2>
@@ -445,8 +518,6 @@ export default function Config() {
                                     </div>
                                 </div>
                             </div>
-
-
 
                             <div className="flex justify-end mt-6">
                                 <button
