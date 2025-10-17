@@ -141,11 +141,17 @@ export default function Config() {
 
         setIsFetchingPrinters(true);
         try {
-            const response = await axios.get(`${urlAgenteImpressao}/printers`);
+            const response = await axios.get(`${urlAgenteImpressao}/printers`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                }
+            });
             console.log("resposta das impressoras",response.data)
             setPrinters(response.data);
             toast.success("Impressoras carregadas com sucesso!");
         } catch (error) {
+            console.log(error)
             toast.error("Erro ao buscar impressoras. Verifique se o agente está ativo.");
         } finally {
             setIsFetchingPrinters(false);
