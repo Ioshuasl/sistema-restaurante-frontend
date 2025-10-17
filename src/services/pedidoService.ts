@@ -7,7 +7,12 @@ export const createPedido = async (payload: CreatePedidoPayload): Promise<Pedido
 };
 
 export const printPedido = async (id: number) => {
-  const response = await api.post(`/pedido/${id}/print`);
+  const response = await api.post(`/pedido/${id}/print`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    }
+  });
   return response.data
 }
 

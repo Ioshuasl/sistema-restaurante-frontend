@@ -104,15 +104,13 @@ export default function OrderManagment() {
     const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
     const handlePrintReceipt = async (order: Pedido) => {
-        // Adicionamos um feedback visual para o usuário
-        console.log(`Enviando pedido #${order.id} para impressão...`);
 
         try {
             // Simplesmente chama a função da API com o ID do pedido
             const result = await printPedido(order.id);
 
             // Feedback de sucesso (você pode substituir por um toast, snackbar, etc.)
-            alert(result.message || 'Pedido enviado para a impressora com sucesso!');
+            toast.success('Pedido enviado para a impressora com sucesso!');
 
         } catch (error: any) {
             // Feedback de erro
