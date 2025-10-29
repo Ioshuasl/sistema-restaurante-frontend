@@ -7,15 +7,18 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import OptionsModal from '../Components/OptionsModal';
 
-// Importando os tipos centralizados
+// 1. Imports ATUALIZADOS
 import {
     type Produto,
     type Config,
     type FormaPagamento,
     type CreatePedidoPayload,
-    type ProdutoPedidoPayload,
-    type SubProduto
+    type ProdutoPedidoPayload, // Este tipo já espera 'opcoesEscolhidas'
+    type IOpcaoItemPedidoPayload // Necessário para o payload
 } from "../../../types/interfaces-types";
+
+// Importa os novos tipos de carrinho
+import { type CartItem, type SelectedOption } from '../Cardapio/Cardapio';
 
 // Importando os serviços
 import { getConfig } from '../../../services/configService';
@@ -23,20 +26,25 @@ import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
 import { createPedido } from '../../../services/pedidoService';
 
 
-export type CartItem = {
-    cartItemId: string;
-    product: Produto;
-    quantity: number;
-    selectedSubProducts: SubProduto[];
-    unitPriceWithSubProducts: number;
-};
+// 2. Tipo local 'CartItem' REMOVIDO
+// (Ele agora é importado do Cardapio.tsx)
 
+// 3. Props ATUALIZADAS
 type Props = {
     cart: CartItem[];
     onConfirm: () => void;
     onIncrease: (cartItemId: string) => void;
     onDecrease: (cartItemId: string) => void;
-    onUpdateItem: (cartItemId: string, newConfig: { product: Produto, subProducts: SubProduto[], quantity: number }) => void;
+    // onUpdateItem agora usa os novos tipos
+    onUpdateItem: (
+        cartItemId: string, 
+        newConfig: { 
+            product: Produto, 
+            selectedOptions: SelectedOption[], 
+            quantity: number, 
+            unitPriceWithOptions: number 
+        }
+    ) => void;
 };
 
 
@@ -63,17 +71,14 @@ export default function Checkout({
     const [taxaEntrega, setTaxaEntrega] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Estado para controlar o modal de edição
     const [itemToEdit, setItemToEdit] = useState<CartItem | null>(null);
-
     const navigate = useNavigate();
 
+    // Lógica de cálculo (Já está correta)
     const totalProdutos = cart.reduce(
-        (acc, item) => acc + item.unitPriceWithSubProducts * item.quantity,
+        (acc, item) => acc + item.unitPriceWithOptions * item.quantity,
         0
     );
-
     const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + Number(taxaEntrega);
 
     useEffect(() => {
@@ -94,7 +99,9 @@ export default function Checkout({
         fetchData();
     }, []);
 
+    // 4. handleSubmit (Payload do Pedido) - CRÍTICO - REFATORADO
     const handleSubmit = async () => {
+        // Validação (sem mudanças)
         if (!name || !telefone || (!retiradaLocal && (!cep || !logradouro || !bairro || !numero || !cidade)) || !payment) {
             toast.error('Por favor, preencha todos os campos obrigatórios.');
             return;
@@ -103,41 +110,44 @@ export default function Checkout({
         setIsSubmitting(true);
 
         try {
-            const produtosPedido: ProdutoPedidoPayload[] = cart.map(item => ({
-                produtoId: item.product.id,
-                quantidade: item.quantity,
-                subProdutos: item.selectedSubProducts.map(sp => ({
-                    subProdutoId: sp.id,
-                    // Assumindo que a quantidade de um subproduto é sempre 1
-                    quantidade: 1
-                }))
-            }));
+            // Mapeia o carrinho para o payload que o backend espera
+            const produtosPedido: ProdutoPedidoPayload[] = cart.map(item => {
+                // Mapeia SelectedOption (frontend) para IOpcaoItemPedidoPayload (backend)
+                const opcoes: IOpcaoItemPedidoPayload[] = item.selectedOptions.map(op => ({
+                    itemOpcaoId: op.id,
+                    quantidade: 1 // Assumindo 1 por opção
+                }));
+                
+                return {
+                    produtoId: item.product.id,
+                    quantidade: item.quantity,
+                    opcoesEscolhidas: opcoes // <-- MUDANÇA PRINCIPAL
+                };
+            });
 
             const orderPayload: CreatePedidoPayload = {
                 produtosPedido: produtosPedido,
                 formaPagamento_id: Number(payment),
-                situacaoPedido: 'preparando', // Status inicial
+                situacaoPedido: 'preparando',
                 isRetiradaEstabelecimento: retiradaLocal,
                 nomeCliente: name,
                 telefoneCliente: telefone,
-                cepCliente: cep,
-                tipoLogadouroCliente: 'Não informado', // Pode ser ajustado com um campo no formulário
-                logadouroCliente: logradouro,
-                numeroCliente: numero,
-                quadraCliente: "", // Não há campo específico no formulário
-                loteCliente: "", // Não há campo específico no formulário
-                bairroCliente: bairro,
-                cidadeCliente: cidade,
-                estadoCliente: estado,
-                taxaEntrega: taxaEntrega
+                cepCliente: retiradaLocal ? "" : cep, // Limpa se for retirada
+                tipoLogadouroCliente: retiradaLocal ? "" : 'Não informado',
+                logadouroCliente: retiradaLocal ? "" : logradouro,
+                numeroCliente: retiradaLocal ? "" : numero,
+                quadraCliente: retiradaLocal ? "" : (complemento || ""),
+                loteCliente: retiradaLocal ? "" : (complemento || ""),
+                bairroCliente: retiradaLocal ? "" : bairro,
+                cidadeCliente: retiradaLocal ? "" : cidade,
+                estadoCliente: retiradaLocal ? "" : estado,
+                taxaEntrega: retiradaLocal ? 0 : taxaEntrega
             };
-
-            console.log(orderPayload)
 
             const pedido = await createPedido(orderPayload);
 
             toast.success('Pedido enviado com sucesso!');
-            onConfirm();
+            onConfirm(); // Limpa o carrinho
             navigate('/pedido-confirmado', { state: { pedidoId: pedido.id } });
 
         } catch (error) {
@@ -155,10 +165,23 @@ export default function Checkout({
         setEstado(data.uf || "");
     }
 
-    const handleSaveEdit = (product: Produto, subProducts: SubProduto[], quantity: number) => {
+    // 5. handleSaveEdit ATUALIZADA
+    const handleSaveEdit = (
+        product: Produto, 
+        selectedOptions: SelectedOption[], 
+        quantity: number, 
+        unitPriceWithOptions: number
+    ) => {
         if (itemToEdit) {
-            onUpdateItem(itemToEdit.cartItemId, { product, subProducts, quantity });
+            // Chama a prop 'onUpdateItem' (do App.tsx) com a nova estrutura
+            onUpdateItem(itemToEdit.cartItemId, { 
+                product, 
+                selectedOptions, 
+                quantity, 
+                unitPriceWithOptions 
+            });
         }
+        setItemToEdit(null); // Fecha o modal
     };
 
     const formatValue = (value: number) => {
@@ -184,6 +207,7 @@ export default function Checkout({
                     Finalizar Pedido
                 </h1>
 
+                {/* 6. Resumo do Pedido (JSX) - REFATORADO */}
                 <div className="mb-8">
                     <h2 className="text-lg font-semibold mb-4 text-gray-700">
                         Resumo do Pedido:
@@ -198,10 +222,11 @@ export default function Checkout({
                                         <img src={item.product.image} alt={item.product.nomeProduto} className="w-16 h-16 object-cover rounded" />
                                         <div>
                                             <p className="font-medium text-gray-800">{item.product.nomeProduto}</p>
-                                            {item.selectedSubProducts.length > 0 && (
+                                            {/* Atualizado de 'selectedSubProducts' para 'selectedOptions' */}
+                                            {item.selectedOptions.length > 0 && (
                                                 <div className="mt-1 text-xs text-gray-500">
-                                                    {item.selectedSubProducts.map(sp => (
-                                                        <p key={sp.id}>+ {sp.nomeSubProduto}</p>
+                                                    {item.selectedOptions.map(op => (
+                                                        <p key={op.id}>+ {op.nome}</p>
                                                     ))}
                                                 </div>
                                             )}
@@ -214,7 +239,8 @@ export default function Checkout({
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <p className="text-md font-semibold text-gray-700 whitespace-nowrap">
-                                            R$ {formatValue(item.unitPriceWithSubProducts * item.quantity)}
+                                            {/* Atualizado para 'unitPriceWithOptions' */}
+                                            R$ {formatValue(item.unitPriceWithOptions * item.quantity)}
                                         </p>
                                         <button onClick={() => setItemToEdit(item)} className="text-xs text-blue-600 hover:underline mt-2 flex items-center gap-1">
                                             <Edit size={12} /> Editar
@@ -230,6 +256,7 @@ export default function Checkout({
                     </div>
                 </div>
 
+                {/* --- Formulário (sem mudanças na estrutura, apenas na lógica de 'handleSubmit') --- */}
                 <div className="mb-6 space-y-4">
                     <div>
                         <label className="block font-medium text-gray-700 mb-1">Nome Completo:</label>
@@ -270,7 +297,7 @@ export default function Checkout({
                                 <div>
                                     <label className="block font-medium text-gray-700 mb-1">Cidade:</label>
                                     <input type="text" className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} />
-                                </div>
+                                img-fluid </div>
                                 <div>
                                     <label className="block font-medium text-gray-700 mb-1">Estado:</label>
                                     <input type="text" className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Estado" value={estado} onChange={(e) => setEstado(e.target.value)} />
@@ -316,12 +343,13 @@ export default function Checkout({
                 </div>
             </div>
 
+            {/* 7. Modal de Edição (JSX) - REFATORADO */}
             {itemToEdit && (
                 <OptionsModal
                     product={itemToEdit.product}
-                    initialItem={itemToEdit}
+                    initialItem={itemToEdit} // Agora o OptionsModal sabe lidar com isso
                     onClose={() => setItemToEdit(null)}
-                    onSave={handleSaveEdit}
+                    onSave={handleSaveEdit} // Passa a função de 'update' do checkout
                 />
             )}
 

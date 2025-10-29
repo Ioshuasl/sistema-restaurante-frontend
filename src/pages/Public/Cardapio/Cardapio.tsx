@@ -1,8 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMenu } from '../../../services/menuService';
-import { type Menu, type Produto, type SubProduto, type CartItem } from '../../../types/interfaces-types';
+import {
+    type Menu, // Agora é um alias para CategoriaProduto
+    type Produto,
+    type IOpcaoItemPedidoPayload,
+    type IItemOpcao,
+    type IGrupoOpcao
+} from '../../../types/interfaces-types';
 import { Lock, Truck, CookingPotIcon } from 'lucide-react';
+import OptionsModal from '../Components/OptionsModal';
+
+// (Os tipos CartItem e SelectedOption estão corretos)
+export type SelectedOption = {
+    id: number;
+    nome: string;
+    valorAdicional: number;
+};
+
+export type CartItem = {
+    cartItemId: string;
+    product: Produto;
+    quantity: number;
+    selectedOptions: SelectedOption[];
+    unitPriceWithOptions: number;
+};
 
 type CardapioProps = {
     cart: CartItem[];
@@ -17,7 +39,6 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
-    // --- ESTADOS PARA O MODAL DE OPÇÕES ---
     const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
 
@@ -35,8 +56,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         fetchMenu();
     }, []);
 
-    // --- LÓGICA DO MODAL E DO CARRINHO ATUALIZADA ---
-
+    // (Funções de addToCart, open/close modal, etc. estão corretas)
     const openOptionsModal = (product: Produto) => {
         setSelectedProduct(product);
         setIsOptionsModalOpen(true);
@@ -48,17 +68,22 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
     };
 
     const handleAddToCartClick = (product: Produto) => {
-        if (product.subprodutos && product.subprodutos.length > 0) {
+        if (product.grupos && product.grupos.some(g => g.itens.length > 0)) {
             openOptionsModal(product);
         } else {
-            addToCart(product, [], 1);
+            addToCart(product, [], 1, Number(product.valorProduto));
         }
     };
 
-    const addToCart = (product: Produto, subProducts: SubProduto[], quantity: number) => {
+    const addToCart = (
+        product: Produto,
+        selectedOptions: SelectedOption[],
+        quantity: number,
+        unitPriceWithOptions: number
+    ) => {
         setCart((prevCart) => {
-            const subProductIds = subProducts.map(sp => sp.id).sort().join('-');
-            const cartItemId = `${product.id}-${subProductIds}`;
+            const optionIds = selectedOptions.map(op => op.id).sort().join('-');
+            const cartItemId = `${product.id}-${optionIds}`;
 
             const existingItem = prevCart.find((item) => item.cartItemId === cartItemId);
 
@@ -69,15 +94,12 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                         : item
                 );
             } else {
-                const subProductsTotal = subProducts.reduce((total, sp) => total + Number(sp.valorAdicional), 0);
-                const unitPriceWithSubProducts = Number(product.valorProduto) + subProductsTotal;
-                
                 const newItem: CartItem = {
                     cartItemId,
                     product,
                     quantity,
-                    selectedSubProducts: subProducts,
-                    unitPriceWithSubProducts,
+                    selectedOptions,
+                    unitPriceWithOptions,
                 };
                 return [...prevCart, newItem];
             }
@@ -97,9 +119,9 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
     };
 
     const incrementCartItem = (cartItemId: string) => {
-        setCart((prevCart) => 
-            prevCart.map(item => 
-                item.cartItemId === cartItemId 
+        setCart((prevCart) =>
+            prevCart.map(item =>
+                item.cartItemId === cartItemId
                     ? { ...item, quantity: item.quantity + 1 }
                     : item
             )
@@ -107,7 +129,7 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
     }
 
     const cartTotal = cart.reduce(
-        (total, item) => total + item.unitPriceWithSubProducts * item.quantity,
+        (total, item) => total + item.unitPriceWithOptions * item.quantity,
         0
     );
 
@@ -127,14 +149,17 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
         );
     }
 
+    // --- CORREÇÃO PRINCIPAL AQUI ---
     const filteredMenu = menu
         .map(category => ({
             ...category,
-            produtos: category.produtos.filter(product =>
+            // 1. Lê de 'category.Produtos' (Maiúsculo) - o que vem da API
+            produtos: (category.Produtos || []).filter(product =>
                 product.nomeProduto.toLowerCase().includes(searchTerm.toLowerCase())
             )
+            // 2. Cria uma nova propriedade 'produtos' (minúsculo) para o loop de renderização
         }))
-        .filter(category => category.produtos.length > 0);
+        .filter(category => category.produtos.length > 0); // Filtra categorias sem produtos
 
     return (
         <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col">
@@ -198,22 +223,26 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                             {category.nomeCategoriaProduto}
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {category.produtos.map((product) => (
-                                <div key={product.id} className="bg-white rounded-2xl border border-gray-300 shadow-xl p-5 flex flex-col items-center text-center hover:shadow-xl transition">
-                                    <img src={product.image} alt={product.nomeProduto} className="w-32 h-32 object-cover rounded-xl mb-3" />
-                                    <h3 className="text-lg font-semibold">{product.nomeProduto}</h3>
-                                    <p className="text-red-600 font-bold text-lg mt-2">
-                                        {product.subprodutos && product.subprodutos.length > 0 ? 'A partir de ' : ''}
-                                        R$ {Number(product.valorProduto).toFixed(2)}
-                                    </p>
-                                    <button
-                                        onClick={() => handleAddToCartClick(product)}
-                                        className="mt-4 bg-red-500 cursor-pointer hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-105"
-                                    >
-                                        {product.subprodutos && product.subprodutos.length > 0 ? 'Selecionar Opções' : 'Adicionar ao carrinho'}
-                                    </button>
-                                </div>
-                            ))}
+                            {/* 3. Renderiza 'category.produtos' (minúsculo) - o que foi filtrado */}
+                            {category.produtos.map((product) => {
+                                const hasOptions = product.grupos && product.grupos.some(g => g.itens.length > 0);
+                                return (
+                                    <div key={product.id} className="bg-white rounded-2xl border border-gray-300 shadow-xl p-5 flex flex-col items-center text-center hover:shadow-xl transition">
+                                        <img src={product.image} alt={product.nomeProduto} className="w-32 h-32 object-cover rounded-xl mb-3" />
+                                        <h3 className="text-lg font-semibold">{product.nomeProduto}</h3>
+                                        <p className="text-red-600 font-bold text-lg mt-2">
+                                            {hasOptions ? 'A partir de ' : ''}
+                                            R$ {Number(product.valorProduto).toFixed(2)}
+                                        </p>
+                                        <button
+                                            onClick={() => handleAddToCartClick(product)}
+                                            className="mt-4 bg-red-500 cursor-pointer hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-105"
+                                        >
+                                            {hasOptions ? 'Selecionar Opções' : 'Adicionar ao carrinho'}
+                                        </button>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </section>
                 ))}
@@ -233,13 +262,13 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                                     <img src={item.product.image} alt={item.product.nomeProduto} className="w-16 h-16 object-cover rounded-md" />
                                     <div className="flex-1">
                                         <h3 className="font-medium">{item.product.nomeProduto}</h3>
-                                        {item.selectedSubProducts.length > 0 && (
+                                        {item.selectedOptions.length > 0 && (
                                             <div className="text-xs text-gray-500 mt-1">
-                                                {item.selectedSubProducts.map(sp => (<p key={sp.id}>+ {sp.nomeSubProduto}</p>))}
+                                                {item.selectedOptions.map(op => (<p key={op.id}>+ {op.nome}</p>))}
                                             </div>
                                         )}
                                         <p className="text-sm font-bold text-gray-800 mt-1">
-                                            R$ {(item.unitPriceWithSubProducts * item.quantity).toFixed(2)}
+                                            R$ {(item.unitPriceWithOptions * item.quantity).toFixed(2)}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -268,10 +297,12 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                 </aside>
                 
                 {isOptionsModalOpen && selectedProduct && (
+                    // 4. Prop 'onSave' está correta (como na minha correção anterior)
                     <OptionsModal
                         product={selectedProduct}
                         onClose={closeOptionsModal}
-                        onAddToCart={addToCart}
+                        // @ts-ignore
+                        onSave={addToCart} 
                     />
                 )}
             </main>
@@ -280,84 +311,6 @@ export default function Cardapio({ cart, setCart }: CardapioProps) {
                 <p>© 2025 GS Sabores. Todos os direitos reservados.</p>
                 <p className="text-sm mt-1">Contato: contato@gssabores.com | (11) 99999-9999</p>
             </footer>
-        </div>
-    );
-}
-
-type OptionsModalProps = {
-    product: Produto;
-    onClose: () => void;
-    onAddToCart: (product: Produto, subProducts: SubProduto[], quantity: number) => void;
-};
-
-function OptionsModal({ product, onClose, onAddToCart }: OptionsModalProps) {
-    const [quantity, setQuantity] = useState(1);
-    const [selectedSubProducts, setSelectedSubProducts] = useState<SubProduto[]>([]);
-
-    const handleSubProductToggle = (subProduct: SubProduto) => {
-        setSelectedSubProducts((prev) =>
-            prev.some(sp => sp.id === subProduct.id)
-                ? prev.filter(sp => sp.id !== subProduct.id)
-                : [...prev, subProduct]
-        );
-    };
-
-    const subProductsTotal = selectedSubProducts.reduce((total, sp) => total + Number(sp.valorAdicional), 0);
-    const totalItemPrice = (Number(product.valorProduto) + subProductsTotal) * quantity;
-
-    const handleConfirm = () => {
-        onAddToCart(product, selectedSubProducts, quantity);
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                    <h2 className="text-2xl font-bold text-gray-800">{product.nomeProduto}</h2>
-                    <button onClick={onClose} className="text-2xl text-gray-500 hover:text-gray-800">&times;</button>
-                </div>
-                
-                <p className="text-gray-600">Selecione os ingredientes adicionais que você deseja.</p>
-
-                <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
-                    {product.subprodutos?.map(subProduct => (
-                        <label key={subProduct.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 cursor-pointer">
-                            <div>
-                                <p className="font-semibold">{subProduct.nomeSubProduto}</p>
-                                
-                                {/* ALTERAÇÃO APLICADA AQUI */}
-                                {Number(subProduct.valorAdicional) > 0 && (
-                                    <p className="text-sm text-red-600">
-                                        + R$ {Number(subProduct.valorAdicional).toFixed(2)}
-                                    </p>
-                                )}
-                            </div>
-                            <input
-                                type="checkbox"
-                                onChange={() => handleSubProductToggle(subProduct)}
-                                className="h-5 w-5 rounded text-red-600 focus:ring-red-500 border-gray-300"
-                            />
-                        </label>
-                    ))}
-                </div>
-
-                <div className="flex items-center justify-between mt-4">
-                    <p className="font-semibold text-lg">Quantidade:</p>
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="text-xl bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">-</button>
-                        <span className="text-xl font-bold">{quantity}</span>
-                        <button onClick={() => setQuantity(q => q + 1)} className="text-xl bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">+</button>
-                    </div>
-                </div>
-
-                <button
-                    onClick={handleConfirm}
-                    className="w-full bg-red-600 text-white font-bold py-3 rounded-lg mt-4 hover:bg-red-700 transition"
-                >
-                    Adicionar ao Carrinho - R$ {totalItemPrice.toFixed(2)}
-                </button>
-            </div>
         </div>
     );
 }

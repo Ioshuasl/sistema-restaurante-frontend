@@ -1,5 +1,7 @@
-// --- Autenticação e Usuário ---
+// src/types/interfaces-types.ts
 
+// --- Autenticação e Usuário ---
+// (Sem alterações nesta seção)
 export interface LoginPayload {
   username: string;
   password: string;
@@ -22,10 +24,10 @@ export interface User {
   nome: string;
   cargo_id: number;
   username: string;
-  password?: string; // A senha é opcional, pois não será retornada nas buscas
+  password?: string;
   createdAt: string;
   updatedAt: string;
-  Cargo: Cargo; // Relação com o tipo Cargo
+  Cargo: Cargo;
 }
 
 export interface CreateUserPayload {
@@ -44,7 +46,7 @@ export interface UpdateUserPayload {
 
 
 // --- Cargo ---
-
+// (Sem alterações nesta seção)
 export interface Cargo {
   id: number;
   nome: string;
@@ -52,7 +54,7 @@ export interface Cargo {
   admin: boolean;
   createdAt: string;
   updatedAt: string;
-  Users?: User[]; // Relação opcional com o tipo User
+  Users?: User[];
 }
 
 export interface CreateCargoPayload {
@@ -69,7 +71,7 @@ export interface UpdateCargoPayload {
 
 
 // --- Configuração ---
-
+// (Sem alterações nesta seção)
 export interface Config {
   id: number;
   cnpj: string;
@@ -117,13 +119,13 @@ export interface UpdateConfigPayload {
 
 
 // --- Formas de Pagamento ---
-
+// (Sem alterações nesta seção)
 export interface FormaPagamento {
   id: number;
   nomeFormaPagamento: string;
   createdAt: string;
   updatedAt: string;
-  Pedidos?: Pedido[]; // Relação opcional com o tipo Pedido
+  Pedidos?: Pedido[];
 }
 
 export interface CreateFormaPagamentoPayload {
@@ -135,14 +137,14 @@ export interface UpdateFormaPagamentoPayload {
 }
 
 
-// --- Produto e Categoria de Produto ---
+// --- Produto e Categoria de Produto (SEÇÃO REFATORADA) ---
 
 export interface CategoriaProduto {
   id: number;
   nomeCategoriaProduto: string;
   createdAt: string;
   updatedAt: string;
-  Produtos?: Produto[]; // Relação opcional com o tipo Produto
+  Produtos?: Produto[];
 }
 
 export interface CreateCategoriaProdutoPayload {
@@ -152,22 +154,40 @@ export interface CreateCategoriaProdutoPayload {
 export interface UpdateCategoriaProdutoPayload {
   nomeCategoriaProduto?: string;
 }
-export interface SubProduto {
+
+// --- REMOVIDAS ---
+// export interface SubProduto { ... }
+// export interface SubItemPedido { ... }
+// export interface CreateSubProdutoPayload { ... }
+// export interface UpdateSubProdutoPayload { ... }
+
+// --- NOVAS INTERFACES (backend response) ---
+
+// O item individual (Ex: Arroz, Filé de Frango)
+export interface IItemOpcao {
   id: number;
-  nomeSubProduto: string;
-  isAtivo: boolean;
+  nome: string;
   valorAdicional: number;
+  isAtivo: boolean;
+  grupoOpcao_id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// O grupo (Ex: Bases, Carnes) que contém os itens
+export interface IGrupoOpcao {
+  id: number;
+  nome: string;
+  minEscolhas: number;
+  maxEscolhas: number;
   produto_id: number;
+  createdAt: string;
+  updatedAt: string;
+  itens: IItemOpcao[]; // Aninhamento
 }
 
-export interface SubItemPedido {
-  precoAdicional(precoAdicional: any): unknown;
-  subproduto: any;
-  id: number;                 // O ID único do registro do sub-item no pedido
-  nomeSubProduto: string;     // O nome do sub-produto (ex: "Bacon extra")
-  valorAdicional: number;     // O valor que este sub-item adiciona ao produto principal
-}
-
+// --- ATUALIZADA ---
+// A interface Produto agora tem 'grupos' em vez de 'subprodutos'
 export interface Produto {
   id: number;
   nomeProduto: string;
@@ -177,43 +197,53 @@ export interface Produto {
   categoriaProduto_id: number;
   createdAt: string;
   updatedAt: string;
-  CategoriaProduto?: CategoriaProduto; // Relação opcional com o tipo CategoriaProduto
-  ItemPedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
-  subprodutos?: SubProduto[];
+  CategoriaProduto?: CategoriaProduto;
+  ItemPedidos?: ItemPedido[];
+  grupos?: IGrupoOpcao[]; // <-- MUDANÇA AQUI
 }
 
-export interface CreateSubProdutoPayload {
-  nomeSubProduto: string;
-  valorSubProduto: number;
+// --- NOVAS INTERFACES (payload para criar/atualizar produto) ---
+
+export interface IItemOpcaoPayload {
+  id?: number; // Opcional (usado no update)
+  nome: string;
+  valorAdicional: number;
   isAtivo: boolean;
-  produto_id: number;
 }
 
-export interface UpdateSubProdutoPayload {
-  nomeSubProduto?: string;
-  valorSubProduto?: number;
-  isAtivo: boolean;
-  produto_id?: number;
+export interface IGrupoOpcaoPayload {
+  id?: number; // Opcional (usado no update)
+  nome: string;
+  minEscolhas: number;
+  maxEscolhas: number;
+  itens: IItemOpcaoPayload[];
 }
 
+// --- ATUALIZADA ---
+// O payload de criação agora inclui 'grupos'
 export interface CreateProdutoPayload {
   nomeProduto: string;
   valorProduto: number;
   image: string;
   isAtivo: boolean;
   categoriaProduto_id: number;
+  grupos?: IGrupoOpcaoPayload[]; // <-- MUDANÇA AQUI
 }
 
+// --- ATUALIZADA ---
+// O payload de atualização agora inclui 'grupos'
 export interface UpdateProdutoPayload {
   nomeProduto?: string;
   valorProduto?: number;
   image?: string;
   isAtivo?: boolean;
   categoriaProduto_id?: number;
+  grupos?: IGrupoOpcaoPayload[]; // <-- MUDANÇA AQUI
 }
 
 
-// --- Pedido e Itens de Pedido ---
+// --- Pedido e Itens de Pedido (SEÇÃO REFATORADA) ---
+
 type situacaoPedido = 'preparando' | 'entrega' | 'finalizado' | 'cancelado'
 
 export interface Pedido {
@@ -235,10 +265,23 @@ export interface Pedido {
   valorTotalPedido: number;
   createdAt: string;
   updatedAt: string;
-  FormaPagamento?: FormaPagamento; // Relação opcional com o tipo FormaPagamento
-  itensPedido?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
+  FormaPagamento?: FormaPagamento;
+  itensPedido?: ItemPedido[];
 }
 
+// --- NOVA INTERFACE (backend response) ---
+// O item de opção que foi salvo no pedido (Ex: Arroz, R$ 0.00)
+export interface IOpcaoItemPedido {
+  id: number;
+  itemPedidoId: number;
+  itemOpcaoId: number;
+  quantidade: number;
+  precoAdicional: number;
+  ItemOpcao: IItemOpcao; // Inclui o nome e detalhes
+}
+
+// --- ATUALIZADA ---
+// ItemPedido (response) agora tem 'opcoesPedido' em vez de 'subItensPedido'
 export interface ItemPedido {
   id: number;
   pedidoId: number;
@@ -248,19 +291,29 @@ export interface ItemPedido {
   createdAt: string;
   updatedAt: string;
   produto?: Produto;
-  subItensPedido?: SubItemPedido[];  // novo relacionamento opcional
+  opcoesPedido?: IOpcaoItemPedido[]; // <-- MUDANÇA AQUI
 }
 
+// --- NOVA INTERFACE (payload para criar pedido) ---
+// O payload de uma opção escolhida (Ex: { id: 1, qtd: 1 })
+export interface IOpcaoItemPedidoPayload {
+  itemOpcaoId: number;
+  quantidade: number;
+}
+
+// --- REMOVIDA ---
+// export interface SubProdutoPedidoPayload { ... }
+
+// --- ATUALIZADA ---
+// O payload de um produto no pedido
 export interface ProdutoPedidoPayload {
   produtoId: number;
   quantidade: number;
-  subProdutos?: SubProdutoPedidoPayload[];  // opcional, lista de subprodutos para esse item
+  opcoesEscolhidas?: IOpcaoItemPedidoPayload[]; // <-- MUDANÇA AQUI
 }
 
-export interface SubProdutoPedidoPayload {
-  subProdutoId: number;
-  quantidade: number;
-}
+// --- ATUALIZADA ---
+// O payload de criação de pedido
 export interface CreatePedidoPayload {
   produtosPedido: ProdutoPedidoPayload[];
   formaPagamento_id: number;
@@ -300,13 +353,14 @@ export interface UpdatePedidoPayload {
 
 
 // --- Menu ---
-
-// A interface do menu é geralmente uma categoria de produto com seus produtos inclusos
+// (Sem alterações, mas agora `Produto` está atualizado)
 export interface Menu extends CategoriaProduto {
-  produtos: Produto[];
+  Produtos: Produto[];
 }
 
-// Tipos para as respostas da API do dashboard
+
+// --- Dashboard ---
+// (Sem alterações)
 export interface MonthlyRevenueResponse {
   totalRevenue: number;
 }
@@ -321,10 +375,14 @@ export interface PaymentDistribution {
   value: number;
 }
 
+// --- Carrinho (Tipo do Frontend) (SEÇÃO REFATORADA) ---
+
+// --- ATUALIZADA ---
+// O item do carrinho
 export type CartItem = {
-  cartItemId: string;
-  product: Produto;
-  quantity: number;
-  selectedSubProducts: SubProduto[];
-  unitPriceWithSubProducts: number;
+  cartItemId: string; // ID único do item no carrinho
+  product: Produto; // O produto principal (Marmita)
+  quantity: number; // Quantas marmitas
+  opcoesEscolhidas: IOpcaoItemPedidoPayload[]; // As opções (Arroz, Frango...)
+  unitPriceWithOptions: number; // O preço final de UMA marmita com suas opções
 };

@@ -4,6 +4,7 @@ import Sidebar from "../Components/Sidebar";
 import { printPedido, getAllPedidos, updatePedido } from "../../../services/pedidoService";
 import { getConfig } from "../../../services/configService";
 import { getAllFormasPagamento } from "../../../services/formaPagamentoService";
+// Os tipos já estão corretos graças à Etapa 1
 import { type Pedido, type FormaPagamento } from "../../../types/interfaces-types";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -106,14 +107,10 @@ export default function OrderManagment() {
     const handlePrintReceipt = async (order: Pedido) => {
 
         try {
-            // Simplesmente chama a função da API com o ID do pedido
             const result = await printPedido(order.id);
-
-            // Feedback de sucesso (você pode substituir por um toast, snackbar, etc.)
             toast.success('Pedido enviado para a impressora com sucesso!');
 
         } catch (error: any) {
-            // Feedback de erro
             console.error("Falha ao imprimir o pedido:", error);
             const errorMessage = error.response?.data?.message || 'Não foi possível enviar o pedido para a impressão.';
             alert(`Erro: ${errorMessage}`);
@@ -197,13 +194,17 @@ export default function OrderManagment() {
                                         {order.itensPedido?.map((item, index) => (
                                             <li key={index} className="mb-1">
                                                 - {item.produto?.nomeProduto} x {item.quantidade}
-                                                {item.subItensPedido && item.subItensPedido.length > 0 && (
+                                                
+                                                {/* --- MUDANÇA 1 --- */}
+                                                {item.opcoesPedido && item.opcoesPedido.length > 0 && (
                                                     <ul className="pl-5 text-xs text-gray-500">
-                                                        {item.subItensPedido.map((subItem) => (
-                                                            <li key={subItem.id}>• {subItem.subproduto?.nomeSubProduto}</li>
+                                                        {item.opcoesPedido.map((subItem) => (
+                                                            <li key={subItem.id}>• {subItem.ItemOpcao?.nome}</li>
                                                         ))}
                                                     </ul>
                                                 )}
+                                                {/* --- FIM MUDANÇA 1 --- */}
+
                                             </li>
                                         ))}
                                     </ul>
@@ -284,13 +285,17 @@ export default function OrderManagment() {
                                         {selectedOrder.itensPedido?.map((item) => (
                                             <li key={item.id}>
                                                 {item.quantidade}x {item.produto?.nomeProduto} (R$ {Number(item.precoUnitario)?.toFixed(2)} cada)
-                                                {item.subItensPedido && item.subItensPedido.length > 0 && (
+                                                
+                                                {/* --- MUDANÇA 2 --- */}
+                                                {item.opcoesPedido && item.opcoesPedido.length > 0 && (
                                                     <ul className="list-['-_'] list-inside pl-4 text-sm text-gray-600">
-                                                        {item.subItensPedido.map(subItem => (
-                                                            <li key={subItem.id}>{subItem.subproduto?.nomeSubProduto} (+ R$ {Number(subItem.precoAdicional)?.toFixed(2)})</li>
+                                                        {item.opcoesPedido.map(subItem => (
+                                                            <li key={subItem.id}>{subItem.ItemOpcao?.nome} (+ R$ {Number(subItem.precoAdicional)?.toFixed(2)})</li>
                                                         ))}
                                                     </ul>
                                                 )}
+                                                {/* --- FIM MUDANÇA 2 --- */}
+
                                             </li>
                                         ))}
                                     </ul>
@@ -331,16 +336,20 @@ export default function OrderManagment() {
                                                     <span>{item.quantidade}x {item.produto?.nomeProduto}</span>
                                                     <span>R$ {(Number(item.precoUnitario) * item.quantidade)?.toFixed(2)}</span>
                                                 </div>
-                                                {item.subItensPedido && item.subItensPedido.length > 0 && (
+                                                
+                                                {/* --- MUDANÇA 3 --- */}
+                                                {item.opcoesPedido && item.opcoesPedido.length > 0 && (
                                                     <ul className="pl-4 text-xs text-gray-500">
-                                                        {item.subItensPedido.map(subItem => (
+                                                        {item.opcoesPedido.map(subItem => (
                                                             <li key={subItem.id} className="flex justify-between">
-                                                                <span>&nbsp;&nbsp;&nbsp;- {subItem.subproduto?.nomeSubProduto}</span>
+                                                                <span>&nbsp;&nbsp;&nbsp;- {subItem.ItemOpcao?.nome}</span>
                                                                 <span>+ R$ {Number(subItem.precoAdicional)?.toFixed(2)}</span>
                                                             </li>
                                                         ))}
                                                     </ul>
                                                 )}
+                                                {/* --- FIM MUDANÇA 3 --- */}
+
                                             </li>
                                         ))}
                                     </ul>
