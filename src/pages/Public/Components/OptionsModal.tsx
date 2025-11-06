@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
-import { type Produto, type SubProduto, type CartItem } from '../../../types/interfaces-types';
+import { useState } from 'react';
+// 1. Importar tipos e Toast
+import { type Produto, type SubProduto, type CartItem, type GrupoOpcao } from '../../../types/interfaces-types';
+import { toast } from 'react-toastify'; 
+// (Assumindo que o ToastContainer já está no Checkout.tsx)
 
 type OptionsModalProps = {
     product: Produto;
@@ -9,25 +12,58 @@ type OptionsModalProps = {
 };
 
 export default function OptionsModal({ product, initialItem, onClose, onSave }: OptionsModalProps) {
-    // Se estiver editando, começa com a quantidade do item, senão, 1.
     const [quantity, setQuantity] = useState(initialItem?.quantity || 1);
-    // Se estiver editando, já começa com os sub-produtos selecionados.
     const [selectedSubProducts, setSelectedSubProducts] = useState<SubProduto[]>(initialItem?.selectedSubProducts || []);
 
-    const handleSubProductToggle = (subProduct: SubProduto) => {
-        setSelectedSubProducts((prev) =>
-            prev.some(sp => sp.id === subProduct.id)
-                ? prev.filter(sp => sp.id !== subProduct.id)
-                : [...prev, subProduct]
-        );
+    // 2. LÓGICA DE SELEÇÃO ATUALIZADA
+    const handleSelectionChange = (opcao: SubProduto, grupo: GrupoOpcao) => {
+        setSelectedSubProducts((prevSelected) => {
+            const isRadio = grupo.maxEscolhas === 1;
+            const isSelected = prevSelected.some(sp => sp.id === opcao.id);
+            
+            const otherGroupOptions = prevSelected.filter(sp => sp.grupoOpcao_id !== grupo.id);
+            const currentGroupOptions = prevSelected.filter(sp => sp.grupoOpcao_id === grupo.id);
+
+            if (isRadio) {
+                // Lógica de Rádio: substitui
+                return [...otherGroupOptions, opcao];
+            } else {
+                // Lógica de Checkbox
+                if (isSelected) {
+                    // Remove
+                    return [...otherGroupOptions, ...currentGroupOptions.filter(sp => sp.id !== opcao.id)];
+                } else {
+                    // Adiciona, se houver espaço
+                    if (currentGroupOptions.length < grupo.maxEscolhas) {
+                        return [...prevSelected, opcao];
+                    } else {
+                        toast.warn(`Você só pode escolher até ${grupo.maxEscolhas} opções do grupo "${grupo.nomeGrupo}".`);
+                        return prevSelected; // Retorna o estado anterior (não adiciona)
+                    }
+                }
+            }
+        });
     };
 
     const subProductsTotal = selectedSubProducts.reduce((total, sp) => total + Number(sp.valorAdicional), 0);
     const totalItemPrice = (Number(product.valorProduto) + subProductsTotal) * quantity;
 
+    // 3. LÓGICA DE CONFIRMAÇÃO ATUALIZADA (com validação)
     const handleConfirm = () => {
-        onSave(product, selectedSubProducts, quantity);
-        onClose();
+        // Validar 'minEscolhas' antes de salvar
+        let isValid = true;
+        product.gruposOpcoes?.forEach(grupo => {
+            const selectedCount = selectedSubProducts.filter(sp => sp.grupoOpcao_id === grupo.id).length;
+            if (selectedCount < grupo.minEscolhas) {
+                isValid = false;
+                toast.error(`Escolha pelo menos ${grupo.minEscolhas} opção(ões) do grupo "${grupo.nomeGrupo}".`);
+            }
+        });
+
+        if (isValid) {
+            onSave(product, selectedSubProducts, quantity);
+            onClose();
+        }
     };
 
     return (
@@ -40,25 +76,45 @@ export default function OptionsModal({ product, initialItem, onClose, onSave }: 
                 
                 <p className="text-gray-600">Ajuste os ingredientes e a quantidade como desejar.</p>
 
-                <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
-                    {product.subprodutos?.map(subProduct => (
-                        <label key={subProduct.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 cursor-pointer">
-                            <div>
-                                <p className="font-semibold">{subProduct.nomeSubProduto}</p>
-                                {Number(subProduct.valorAdicional) > 0 && (
-                                    <p className="text-sm text-red-600">+ R$ {Number(subProduct.valorAdicional).toFixed(2)}</p>
-                                )}
+                {/* --- 4. JSX ATUALIZADO PARA GRUPOS --- */}
+                <div className="max-h-60 overflow-y-auto space-y-4 pr-2">
+                    {product.gruposOpcoes?.map(grupo => (
+                        <div key={grupo.id} className="border rounded-lg p-3">
+                            <h3 className="font-bold text-gray-700">{grupo.nomeGrupo}</h3>
+                            <p className="text-sm text-gray-500 mb-2">
+                                (Escolha {grupo.minEscolhas === grupo.maxEscolhas 
+                                    ? `exatamente ${grupo.minEscolhas}` 
+                                    : `de ${grupo.minEscolhas} até ${grupo.maxEscolhas}`
+                                } {grupo.maxEscolhas === 1 ? 'opção' : 'opções'})
+                            </p>
+                            
+                            <div className='space-y-2'>
+                                {grupo.opcoes?.map(opcao => (
+                                    <label key={opcao.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                                        <div>
+                                            <p className="font-semibold">{opcao.nomeSubProduto}</p>
+                                            {Number(opcao.valorAdicional) > 0 && (
+                                                <p className="text-sm text-red-600">
+                                                    + R$ {Number(opcao.valorAdicional).toFixed(2)}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <input
+                                            type={grupo.maxEscolhas === 1 ? 'radio' : 'checkbox'}
+                                            name={grupo.id.toString()} // Agrupa os radio buttons
+                                            // 'defaultChecked' não funciona bem com estado, usamos 'checked'
+                                            checked={selectedSubProducts.some(sp => sp.id === opcao.id)}
+                                            onChange={() => handleSelectionChange(opcao, grupo)}
+                                            className="h-5 w-5 rounded text-red-600 focus:ring-red-500 border-gray-300"
+                                        />
+                                    </label>
+                                ))}
                             </div>
-                            <input
-                                type="checkbox"
-                                // O checkbox já vem marcado se o sub-produto estiver na lista inicial
-                                defaultChecked={selectedSubProducts.some(sp => sp.id === subProduct.id)}
-                                onChange={() => handleSubProductToggle(subProduct)}
-                                className="h-5 w-5 rounded text-red-600 focus:ring-red-500 border-gray-300"
-                            />
-                        </label>
+                        </div>
                     ))}
                 </div>
+                {/* --- Fim da Iteração de Grupos --- */}
+
 
                 <div className="flex items-center justify-between mt-4">
                     <p className="font-semibold text-lg">Quantidade:</p>

@@ -152,12 +152,25 @@ export interface CreateCategoriaProdutoPayload {
 export interface UpdateCategoriaProdutoPayload {
   nomeCategoriaProduto?: string;
 }
+
+export interface GrupoOpcao {
+  id: number;
+  nomeGrupo: string;
+  minEscolhas: number;
+  maxEscolhas: number;
+  produto_id: number;
+  createdAt?: string;
+  updatedAt?: string;
+  opcoes?: SubProduto[]; // Um grupo tem várias opções (SubProdutos)
+}
+
 export interface SubProduto {
   id: number;
   nomeSubProduto: string;
   isAtivo: boolean;
   valorAdicional: number;
-  produto_id: number;
+  // produto_id: number; // REMOVIDO
+  grupoOpcao_id: number; // ADICIONADO
 }
 
 export interface SubItemPedido {
@@ -177,23 +190,40 @@ export interface Produto {
   categoriaProduto_id: number;
   createdAt: string;
   updatedAt: string;
-  CategoriaProduto?: CategoriaProduto; // Relação opcional com o tipo CategoriaProduto
-  ItemPedidos?: ItemPedido[]; // Relação opcional com o tipo ItemPedido
-  subprodutos?: SubProduto[];
+  CategoriaProduto?: CategoriaProduto;
+  ItemPedidos?: ItemPedido[];
+  // subprodutos?: SubProduto[]; // REMOVIDO
+  gruposOpcoes?: GrupoOpcao[]; // ADICIONADO: Array de grupos
+}
+
+export interface OpcaoPayload {
+  id?: number; // Opcional, para atualizações
+  nomeSubProduto: string;
+  valorAdicional: number;
+  isAtivo: boolean;
+}
+
+// Payload para criar um GrupoOpcao aninhado
+export interface GrupoOpcaoPayload {
+  id?: number; // Opcional, para atualizações
+  nomeGrupo: string;
+  minEscolhas: number;
+  maxEscolhas: number;
+  opcoes: OpcaoPayload[];
 }
 
 export interface CreateSubProdutoPayload {
   nomeSubProduto: string;
-  valorSubProduto: number;
+  valorAdicional: number; // Corrigido
   isAtivo: boolean;
-  produto_id: number;
+  grupoOpcao_id: number; // Corrigido
 }
 
 export interface UpdateSubProdutoPayload {
   nomeSubProduto?: string;
-  valorSubProduto?: number;
-  isAtivo: boolean;
-  produto_id?: number;
+  valorAdicional?: number; // Corrigido
+  isAtivo?: boolean;
+  grupoOpcao_id?: number;
 }
 
 export interface CreateProdutoPayload {
@@ -202,6 +232,7 @@ export interface CreateProdutoPayload {
   image: string;
   isAtivo: boolean;
   categoriaProduto_id: number;
+  gruposOpcoes?: GrupoOpcaoPayload[]; // ADICIONADO
 }
 
 export interface UpdateProdutoPayload {
@@ -210,6 +241,7 @@ export interface UpdateProdutoPayload {
   image?: string;
   isAtivo?: boolean;
   categoriaProduto_id?: number;
+  gruposOpcoes?: GrupoOpcaoPayload[]; // ADICIONADO
 }
 
 
