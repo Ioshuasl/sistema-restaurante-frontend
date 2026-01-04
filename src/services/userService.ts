@@ -1,5 +1,6 @@
+
 import api from './api';
-import { type User, type LoginPayload, type AuthResponse, type CreateUserPayload, type UpdateUserPayload } from '../types/interfaces-types'; // Supondo que você tenha um arquivo de tipos
+import { type User, type LoginPayload, type AuthResponse, type CreateUserPayload, type UpdateUserPayload } from '../types';
 
 export const loginUser = async (payload: LoginPayload): Promise<AuthResponse> => {
   const response = await api.post('/login', payload);

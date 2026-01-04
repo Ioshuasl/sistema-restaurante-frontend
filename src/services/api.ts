@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -24,12 +25,9 @@ api.interceptors.response.use(
       (error.response.status === 401 || error.response.status === 403) &&
       window.location.pathname !== '/login'
     ) {
-      // A lógica de logout automático só será executada fora da página de login.
       localStorage.removeItem('token');
-      localStorage.removeItem('user'); // É uma boa prática remover o usuário também
-      window.location.href = '/login';
+      localStorage.removeItem('user');
     }
-
     return Promise.reject(error);
   }
 );

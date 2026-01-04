@@ -1,9 +1,9 @@
+
 import api from './api';
-import { type Pedido, type FormaPagamento, type MonthlyRevenueResponse, type MonthlyOrderCount, type PaymentDistribution  } from '../types/interfaces-types';
+import { type MonthlyRevenueResponse, type MonthlyOrderCount, type PaymentDistribution  } from '../types';
 
 export const getTotalOrders = async (): Promise<number> => {
     const response = await api.get('/pedido/total');
-
     return response.data;
 };
 

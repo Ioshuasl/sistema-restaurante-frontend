@@ -1,429 +1,279 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getMenu } from '../../../services/menuService';
-// 1. Importando GrupoOpcao e toast
-import { type Menu, type Produto, type SubProduto, type CartItem, type GrupoOpcao } from '../../../types/interfaces-types';
-import { Lock, Truck, CookingPotIcon } from 'lucide-react';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
-type CardapioProps = {
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import Header from '../../../components/Public/Header';
+import CartDrawer from '../../../components/Public/CartDrawer';
+import OptionsModal from '../../../components/Public/OptionsModal';
+import { getMenu } from '../../../services/menuService';
+import { type Menu, type Produto, type CartItem, type SubProduto } from '../../../types';
+import { Loader2, WifiOff, SearchX, Plus, RefreshCcw } from 'lucide-react';
+import { toast } from 'react-toastify';
+
+interface CardapioProps {
     cart: CartItem[];
     setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
-};
+    isDarkMode: boolean;
+    toggleTheme: () => void;
+    onCheckout: () => void;
+}
 
-export default function Cardapio({ cart, setCart }: CardapioProps) {
-    const [menu, setMenu] = useState<Menu[]>([]);
+const CATEGORY_STORAGE_KEY = 'gs-sabores-last-category';
+
+export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onCheckout }: CardapioProps) {
+    const [menuData, setMenuData] = useState<Menu[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isOffline, setIsOffline] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const navigate = useNavigate();
-
-    // --- ESTADOS PARA O MODAL DE OPÇÕES ---
+    
+    const [isCartOpen, setIsCartOpen] = useState(false);
     const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+    const [activeCategory, setActiveCategory] = useState<number | null>(null);
 
-    useEffect(() => {
-        const fetchMenu = async () => {
-            try {
-                const menuData = await getMenu();
-                setMenu(menuData);
-            } catch (err) {
-                setError("Não foi possível carregar o cardápio. Tente novamente mais tarde.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchMenu();
-    }, []);
+    const categoryRefs = useRef<Record<number, HTMLElement | null>>({});
+    const isFirstMount = useRef(true);
 
-    // --- LÓGICA DO MODAL E DO CARRINHO ATUALIZADA ---
-
-    const openOptionsModal = (product: Produto) => {
-        setSelectedProduct(product);
-        setIsOptionsModalOpen(true);
-    };
-
-    const closeOptionsModal = () => {
-        setSelectedProduct(null);
-        setIsOptionsModalOpen(false);
-    };
-
-    const handleAddToCartClick = (product: Produto) => {
-        // 2. LÓGICA ATUALIZADA: Checa 'gruposOpcoes'
-        if (product.gruposOpcoes && product.gruposOpcoes.length > 0) {
-            openOptionsModal(product);
-        } else {
-            addToCart(product, [], 1);
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const menu = await getMenu();
+            const normalizedMenu = menu.map((cat: any) => ({
+                ...cat,
+                Produtos: cat.Produtos || cat.produtos || []
+            }));
+            setMenuData(normalizedMenu);
+            setIsOffline(false);
+        } catch (err: any) {
+            console.warn('Erro ao carregar menu real', err);
+            setIsOffline(true);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const addToCart = (product: Produto, subProducts: SubProduto[], quantity: number) => {
-        setCart((prevCart) => {
-            const subProductIds = subProducts.map(sp => sp.id).sort().join('-');
-            const cartItemId = `${product.id}-${subProductIds}`;
+    useEffect(() => {
+        fetchData();
+        
+        if (isFirstMount.current && cart.length > 0) {
+            toast.info('Seu carrinho foi recuperado!', {
+                icon: <RefreshCcw className="text-blue-500" />,
+                autoClose: 3000
+            });
+        }
+        isFirstMount.current = false;
+    }, []);
 
-            const existingItem = prevCart.find((item) => item.cartItemId === cartItemId);
+    useEffect(() => {
+        if (!isLoading && menuData.length > 0) {
+            const lastCat = localStorage.getItem(CATEGORY_STORAGE_KEY);
+            if (lastCat && categoryRefs.current[Number(lastCat)]) {
+                setTimeout(() => {
+                    categoryRefs.current[Number(lastCat)]?.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }, 100);
+            }
+        }
+    }, [isLoading, menuData]);
 
-            if (existingItem) {
-                return prevCart.map((item) =>
+    useEffect(() => {
+        if (isLoading || menuData.length === 0) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        const id = Number(entry.target.id.split('-')[1]);
+                        setActiveCategory(id);
+                        localStorage.setItem(CATEGORY_STORAGE_KEY, id.toString());
+                    }
+                });
+            },
+            { threshold: 0.2, rootMargin: '-80px 0px -50% 0px' }
+        );
+
+        Object.values(categoryRefs.current).forEach((ref) => {
+            if (ref) observer.observe(ref as Element);
+        });
+
+        return () => observer.disconnect();
+    }, [menuData, isLoading]);
+
+    const filteredMenu = useMemo(() => {
+        return menuData.map(category => {
+            const products = category.Produtos || [];
+            return {
+                ...category,
+                Produtos: products.filter(product =>
+                    product.nomeProduto.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+            };
+        }).filter(category => category.Produtos && category.Produtos.length > 0);
+    }, [searchTerm, menuData]);
+
+    const cartTotal = useMemo(() => 
+        cart.reduce((sum, item) => sum + item.unitPriceWithSubProducts * item.quantity, 0),
+    [cart]);
+
+    const addToCart = (
+        product: Produto,
+        selectedSubProducts: SubProduto[],
+        quantity: number,
+        unitPriceWithSubProducts: number,
+        observation?: string
+    ) => {
+        setCart(prev => {
+            const subProductIds = selectedSubProducts.map(op => op.id).sort().join('-');
+            const cartItemId = `${product.id}-${subProductIds}-${observation || ''}`;
+            const existing = prev.find(item => item.cartItemId === cartItemId);
+
+            if (existing) {
+                return prev.map(item =>
                     item.cartItemId === cartItemId
                         ? { ...item, quantity: item.quantity + quantity }
                         : item
                 );
-            } else {
-                const subProductsTotal = subProducts.reduce((total, sp) => total + Number(sp.valorAdicional), 0);
-                const unitPriceWithSubProducts = Number(product.valorProduto) + subProductsTotal;
-                
-                const newItem: CartItem = {
-                    cartItemId,
-                    product,
-                    quantity,
-                    selectedSubProducts: subProducts,
-                    unitPriceWithSubProducts,
-                };
-                return [...prevCart, newItem];
             }
+            return [...prev, { 
+                cartItemId, 
+                product, 
+                quantity, 
+                selectedSubProducts, 
+                unitPriceWithSubProducts,
+                observation
+            }];
         });
+        setIsCartOpen(true);
+        setIsOptionsModalOpen(false);
     };
 
-    const removeFromCart = (cartItemId: string) => {
-        setCart((prevCart) =>
-            prevCart
-                .map((item) =>
-                    item.cartItemId === cartItemId
-                        ? { ...item, quantity: item.quantity - 1 }
-                        : item
-                )
-                .filter((item) => item.quantity > 0)
-        );
-    };
-
-    const incrementCartItem = (cartItemId: string) => {
-        setCart((prevCart) => 
-            prevCart.map(item => 
+    const updateQuantity = (cartItemId: string, delta: number) => {
+        setCart(prev => 
+            prev.map(item => 
                 item.cartItemId === cartItemId 
-                    ? { ...item, quantity: item.quantity + 1 }
+                    ? { ...item, quantity: Math.max(0, item.quantity + delta) } 
                     : item
-            )
+            ).filter(item => item.quantity > 0)
         );
-    }
-
-    const cartTotal = cart.reduce(
-        (total, item) => total + item.unitPriceWithSubProducts * item.quantity,
-        0
-    );
-
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-screen bg-gray-50">
-                <p className="text-xl text-gray-700">Carregando cardápio...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex justify-center items-center h-screen bg-gray-50">
-                <p className="text-xl text-red-600">{error}</p>
-            </div>
-        );
-    }
-
-    const filteredMenu = menu
-        .map(category => ({
-            ...category,
-            produtos: category.produtos.filter(product =>
-                product.nomeProduto.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-        }))
-        .filter(category => category.produtos.length > 0);
-
-    return (
-        <div className="min-h-screen bg-gray-50 text-gray-800 flex flex-col">
-            <title>GS Sabores</title>
-            
-            <header className="bg-gradient-to-r from-red-600 to-red-500 text-white py-6 shadow-lg relative">
-                <div className='flex flex-1 justify-between items-center px-4'>
-                    <div className='max-w-7xl mx-auto text-center'>
-                        <h1 className="text-3xl font-bold flex items-center justify-center gap-2 tracking-wide"><CookingPotIcon size={36} /> GS Sabores</h1>
-                        <p className="text-sm mt-1 flex items-center justify-center gap-2">
-                            <Truck size={16} color='yellow' /> Entregamos sabor até você!
-                        </p>
-                    </div>
-                    <div>
-                        <button
-                            onClick={() => navigate('/login')}
-                            aria-label="Acesso administrativo"
-                            className="absolute top-1/2 right-6 cursor-pointer -translate-y-1/2 text-white hover:text-gray-200 transition"
-                        >
-                            <Lock size={24} />
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <nav className="bg-white shadow-md sticky top-0 z-30 border-b border-gray-200">
-                <ul className="flex justify-center gap-6 py-4 font-medium text-gray-700 overflow-x-auto whitespace-nowrap px-4">
-                    {menu.map((category) => (
-                        <li key={category.id}>
-                            <a href={`#${category.nomeCategoriaProduto}`} className="hover:text-red-600 transition duration-200">
-                                {category.nomeCategoriaProduto}
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-
-            <div className="px-4 py-4">
-                <input
-                    type="text"
-                    placeholder="Buscar produto..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-600"
-                />
-            </div>
-
-            <main className="w-full px-4 py-8 flex-grow">
-                {!isCartOpen && cart.length > 0 && (
-                    <button
-                        onClick={() => setIsCartOpen(true)}
-                        className="fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded-full shadow-xl hover:bg-red-700 transition z-50 flex items-center gap-2"
-                    >
-                        🛒 Carrinho ({cart.reduce((sum, item) => sum + item.quantity, 0)})
-                    </button>
-                )}
-
-                {filteredMenu.map((category) => (
-                    <section key={category.id} id={category.nomeCategoriaProduto} className="mb-16 scroll-mt-32">
-                        <h2 className="text-2xl font-bold mb-6 text-red-600 border-b pb-2">
-                            {category.nomeCategoriaProduto}
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {category.produtos.map((product) => (
-                                <div key={product.id} className="bg-white rounded-2xl border border-gray-300 shadow-xl p-5 flex flex-col items-center text-center hover:shadow-xl transition">
-                                    <img src={product.image} alt={product.nomeProduto} className="w-32 h-32 object-cover rounded-xl mb-3" />
-                                    <h3 className="text-lg font-semibold">{product.nomeProduto}</h3>
-                                    <p className="text-red-600 font-bold text-lg mt-2">
-                                        {/* 3. LÓGICA ATUALIZADA: Checa 'gruposOpcoes' */}
-                                        {product.gruposOpcoes && product.gruposOpcoes.length > 0 ? 'A partir de ' : ''}
-                                        R$ {Number(product.valorProduto).toFixed(2)}
-                                    </p>
-                                    <button
-                                        onClick={() => handleAddToCartClick(product)}
-                                        className="mt-4 bg-red-500 cursor-pointer hover:bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-105"
-                                    >
-                                        {/* 4. LÓGICA ATUALIZADA: Checa 'gruposOpcoes' */}
-                                        {product.gruposOpcoes && product.gruposOpcoes.length > 0 ? 'Selecionar Opções' : 'Adicionar ao carrinho'}
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                ))}
-
-                <aside className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl rounded-l-2xl z-50 transition-transform duration-300 ease-in-out flex flex-col ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="flex justify-between items-center px-6 py-5">
-                        <h2 className="text-xl font-bold flex items-center gap-2"><span className="text-red-600">🛒</span> Seu Carrinho</h2>
-                        <button onClick={() => setIsCartOpen(false)} className="text-gray-600 hover:text-red-600 text-2xl">&times;</button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                        {cart.length === 0 ? (
-                            <p className="text-gray-500 text-center mt-10">Seu carrinho está vazio.</p>
-                        ) : (
-                            cart.map((item) => (
-                                <div key={item.cartItemId} className="flex gap-4 p-3 shadow-md rounded-lg border border-gray-300">
-                                    <img src={item.product.image} alt={item.product.nomeProduto} className="w-16 h-16 object-cover rounded-md" />
-                                    <div className="flex-1">
-                                        <h3 className="font-medium">{item.product.nomeProduto}</h3>
-                                        {item.selectedSubProducts.length > 0 && (
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                {item.selectedSubProducts.map(sp => (<p key={sp.id}>+ {sp.nomeSubProduto}</p>))}
-                                            </div>
-                                        )}
-                                        <p className="text-sm font-bold text-gray-800 mt-1">
-                                            R$ {(item.unitPriceWithSubProducts * item.quantity).toFixed(2)}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => removeFromCart(item.cartItemId)} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition">−</button>
-                                        <span>{item.quantity}</span>
-                                        <button onClick={() => incrementCartItem(item.cartItemId)} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition">+</button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    <div className="border-t border-gray-300 p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <span className="text-lg font-semibold">Total:</span>
-                            <span className="text-xl font-bold text-blue-600">R$ {cartTotal.toFixed(2)}</span>
-                        </div>
-                        <button
-                            onClick={() => navigate('/checkout')}
-                            disabled={cart.length === 0}
-                            className={`w-full py-3 rounded-lg text-white font-semibold transition ${cart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                        >
-                            Finalizar Pedido
-                        </button>
-                    </div>
-                </aside>
-                
-                {/* O Modal agora usa a definição local refatorada */}
-                {isOptionsModalOpen && selectedProduct && (
-                    <OptionsModal
-                        product={selectedProduct}
-                        onClose={closeOptionsModal}
-                        onAddToCart={addToCart}
-                    />
-                )}
-            </main>
-
-            <footer className="bg-red-600 text-white text-center py-4">
-                <p>© 2025 GS Sabores. Todos os direitos reservados.</p>
-                <p className="text-sm mt-1">Contato: contato@gssabores.com | (11) 99999-9999</p>
-            </footer>
-            
-            {/* 5. Adicionar ToastContainer para os avisos do modal */}
-            <ToastContainer />
-        </div>
-    );
-}
-
-// ==================================================================
-// --- MODAL LOCAL (DENTRO DE Cardapio.tsx) REFATORADO ---
-// ==================================================================
-
-type OptionsModalProps = {
-    product: Produto;
-    onClose: () => void;
-    onAddToCart: (product: Produto, subProducts: SubProduto[], quantity: number) => void;
-};
-
-function OptionsModal({ product, onClose, onAddToCart }: OptionsModalProps) {
-    const [quantity, setQuantity] = useState(1);
-    const [selectedSubProducts, setSelectedSubProducts] = useState<SubProduto[]>([]);
-
-    const handleSelectionChange = (opcao: SubProduto, grupo: GrupoOpcao) => {
-        setSelectedSubProducts((prevSelected) => {
-            const isRadio = grupo.maxEscolhas === 1;
-            const isSelected = prevSelected.some(sp => sp.id === opcao.id);
-            
-            // 1. Filtra opções de *outros* grupos
-            const otherGroupOptions = prevSelected.filter(sp => sp.grupoOpcao_id !== grupo.id);
-            
-            // 2. Filtra opções *deste* grupo
-            const currentGroupOptions = prevSelected.filter(sp => sp.grupoOpcao_id === grupo.id);
-
-            if (isRadio) {
-                // Lógica de Rádio: substitui qualquer seleção neste grupo
-                return [...otherGroupOptions, opcao];
-            } else {
-                // Lógica de Checkbox
-                if (isSelected) {
-                    // Remove
-                    return [...otherGroupOptions, ...currentGroupOptions.filter(sp => sp.id !== opcao.id)];
-                } else {
-                    // Adiciona, se houver espaço
-                    if (currentGroupOptions.length < grupo.maxEscolhas) {
-                        return [...prevSelected, opcao];
-                    } else {
-                        toast.warn(`Você só pode escolher até ${grupo.maxEscolhas} opções do grupo "${grupo.nomeGrupo}".`);
-                        return prevSelected; // Retorna o estado anterior (não adiciona)
-                    }
-                }
-            }
-        });
     };
 
-    const subProductsTotal = selectedSubProducts.reduce((total, sp) => total + Number(sp.valorAdicional), 0);
-    const totalItemPrice = (Number(product.valorProduto) + subProductsTotal) * quantity;
-
-    const handleConfirm = () => {
-        // Validar 'minEscolhas' antes de adicionar
-        let isValid = true;
-        product.gruposOpcoes?.forEach(grupo => {
-            const selectedCount = selectedSubProducts.filter(sp => sp.grupoOpcao_id === grupo.id).length;
-            if (selectedCount < grupo.minEscolhas) {
-                isValid = false;
-                toast.error(`Escolha pelo menos ${grupo.minEscolhas} opção(ões) do grupo "${grupo.nomeGrupo}".`);
-            }
-        });
-
-        if (isValid) {
-            onAddToCart(product, selectedSubProducts, quantity);
-            onClose();
+    const handleProductClick = (product: Produto) => {
+        const hasOptions = (product.gruposOpcoes && product.gruposOpcoes.length > 0);
+        
+        if (hasOptions) {
+            setSelectedProduct(product);
+            setIsOptionsModalOpen(true);
+        } else {
+            addToCart(product, [], 1, Number(product.valorProduto));
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                    <h2 className="text-2xl font-bold text-gray-800">{product.nomeProduto}</h2>
-                    <button onClick={onClose} className="text-2xl text-gray-500 hover:text-gray-800">&times;</button>
-                </div>
-                
-                <p className="text-gray-600">Selecione os ingredientes como desejar.</p>
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors duration-300">
+                <Loader2 className="w-12 h-12 text-red-600 animate-spin mb-4" />
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">GS Sabores</h2>
+            </div>
+        );
+    }
 
-                {/* --- Início da Iteração de Grupos --- */}
-                <div className="max-h-60 overflow-y-auto space-y-4 pr-2">
-                    {product.gruposOpcoes?.map(grupo => (
-                        <div key={grupo.id} className="border rounded-lg p-3">
-                            <h3 className="font-bold text-gray-700">{grupo.nomeGrupo}</h3>
-                            <p className="text-sm text-gray-500 mb-2">
-                                (Escolha {grupo.minEscolhas === grupo.maxEscolhas 
-                                    ? `exatamente ${grupo.minEscolhas}` 
-                                    : `de ${grupo.minEscolhas} até ${grupo.maxEscolhas}`
-                                } {grupo.maxEscolhas === 1 ? 'opção' : 'opções'})
-                            </p>
-                            
-                            <div className='space-y-2'>
-                                {grupo.opcoes?.map(opcao => (
-                                    <label key={opcao.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 cursor-pointer">
-                                        <div>
-                                            <p className="font-semibold">{opcao.nomeSubProduto}</p>
-                                            {Number(opcao.valorAdicional) > 0 && (
-                                                <p className="text-sm text-red-600">
-                                                    + R$ {Number(opcao.valorAdicional).toFixed(2)}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <input
-                                            type={grupo.maxEscolhas === 1 ? 'radio' : 'checkbox'}
-                                            name={grupo.id.toString()} // Agrupa os radio buttons
-                                            checked={selectedSubProducts.some(sp => sp.id === opcao.id)}
-                                            onChange={() => handleSelectionChange(opcao, grupo)}
-                                            className="h-5 w-5 rounded text-red-600 focus:ring-red-500 border-gray-300"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 sm:pb-0 transition-colors duration-300">
+            {isOffline && (
+                <div className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-[0.2em] py-1 text-center flex items-center justify-center gap-2">
+                    <WifiOff size={12} /> Servidor Offline - Verifique sua conexão
+                </div>
+            )}
+            
+            <Header 
+                searchTerm={searchTerm} 
+                setSearchTerm={setSearchTerm} 
+                cartCount={cart.reduce((s, i) => s + i.quantity, 0)} 
+                onOpenCart={() => setIsCartOpen(true)}
+                isDarkMode={isDarkMode}
+                toggleTheme={toggleTheme}
+            />
+
+            <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-16 sm:top-20 z-40 overflow-x-auto hide-scrollbar transition-colors duration-300">
+                <div className="max-w-7xl mx-auto flex items-center gap-4 px-4 sm:px-8 py-3">
+                    {menuData.map(cat => (
+                        <button 
+                            key={cat.id} 
+                            onClick={() => {
+                                categoryRefs.current[cat.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                            className={`px-6 py-2 rounded-full text-sm font-black whitespace-nowrap transition-all duration-300 ${activeCategory === cat.id ? 'bg-red-600 text-white shadow-lg shadow-red-100 dark:shadow-none translate-y-[-2px]' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100'}`}
+                        >
+                            {cat.nomeCategoriaProduto}
+                        </button>
                     ))}
                 </div>
-                {/* --- Fim da Iteração de Grupos --- */}
+            </nav>
 
-                <div className="flex items-center justify-between mt-4">
-                    <p className="font-semibold text-lg">Quantidade:</p>
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="text-xl bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">-</button>
-                        <span className="text-xl font-bold">{quantity}</span>
-                        <button onClick={() => setQuantity(q => q + 1)} className="text-xl bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">+</button>
+            <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 lg:py-12">
+                {filteredMenu.length > 0 ? (
+                    filteredMenu.map(category => (
+                        <section key={category.id} id={`cat-${category.id}`} ref={(el) => { categoryRefs.current[category.id] = el; }} className="mb-16 scroll-mt-32 sm:scroll-mt-40">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-2 h-10 bg-red-600 rounded-full" />
+                                    <h3 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight transition-colors duration-300">{category.nomeCategoriaProduto}</h3>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                                {category.Produtos.map(product => (
+                                    <div key={product.id} className="group bg-white dark:bg-slate-900 rounded-[2.5rem] p-5 shadow-sm hover:shadow-2xl hover:shadow-slate-200 dark:hover:shadow-slate-950 transition-all duration-300 flex flex-col border border-transparent dark:border-slate-800">
+                                        <div className="relative mb-6 overflow-hidden rounded-[2rem] aspect-[4/3]">
+                                            <img 
+                                                src={product.image || `https://picsum.photos/seed/${product.id}/400/300`} 
+                                                alt={product.nomeProduto} 
+                                                className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop';
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 mb-2 transition-colors duration-300">{product.nomeProduto}</h4>
+                                            {product.descricao && <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">{product.descricao}</p>}
+                                        </div>
+                                        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors duration-300">
+                                            <span className="text-2xl font-black text-slate-900 dark:text-slate-100 transition-colors duration-300">R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}</span>
+                                            <button onClick={() => handleProductClick(product)} className="w-12 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-red-600 text-slate-900 dark:text-slate-100 hover:text-white rounded-2xl flex items-center justify-center transition-all">
+                                                <Plus size={24} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    ))
+                ) : (
+                    <div className="py-20 flex flex-col items-center justify-center text-center">
+                        <div className="w-24 h-24 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-700 mb-6 transition-colors duration-300">
+                            <SearchX size={48} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2 transition-colors duration-300">Ops! Nada encontrado</h3>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium transition-colors duration-300">Não encontramos nenhum item com o nome "<span className="text-red-600">{searchTerm}</span>".</p>
                     </div>
-                </div>
+                )}
+            </main>
 
-                <button
-                    onClick={handleConfirm}
-                    className="w-full bg-red-600 text-white font-bold py-3 rounded-lg mt-4 hover:bg-red-700 transition"
-                >
-                    Adicionar ao Carrinho - R$ {totalItemPrice.toFixed(2)}
-                </button>
-            </div>
+            <CartDrawer 
+                isOpen={isCartOpen} 
+                onClose={() => setIsCartOpen(false)} 
+                cart={cart} 
+                onIncrement={(id) => updateQuantity(id, 1)} 
+                onDecrement={(id) => updateQuantity(id, -1)} 
+                total={cartTotal} 
+                onCheckout={onCheckout} 
+            />
+
+            {isOptionsModalOpen && selectedProduct && (
+                <OptionsModal 
+                    product={selectedProduct} 
+                    onClose={() => setIsOptionsModalOpen(false)} 
+                    onSave={addToCart} 
+                />
+            )}
         </div>
     );
 }

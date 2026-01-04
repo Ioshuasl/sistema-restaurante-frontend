@@ -1,366 +1,364 @@
-import { useState, useEffect } from "react";
-import { BadgeCheck, Clock, XCircle, Truck, X, Printer } from "lucide-react";
-import Sidebar from "../Components/Sidebar";
-import { printPedido, getAllPedidos, updatePedido } from "../../../services/pedidoService";
-import { getConfig } from "../../../services/configService";
-import { getAllFormasPagamento } from "../../../services/formaPagamentoService";
-import { type Pedido, type FormaPagamento } from "../../../types/interfaces-types";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
-export default function OrderManagment() {
-    const [statusFilter, setStatusFilter] = useState<
-        "todos" | "preparando" | "entrega" | "finalizado" | "cancelado"
-    >("todos");
-    const [searchId, setSearchId] = useState("");
-    const [orders, setOrders] = useState<Pedido[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedOrder, setSelectedOrder] = useState<Pedido | null>(null);
-    const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-    const [taxaEntrega, setTaxaEntrega] = useState(0);
-    const [razaoSocial, setRazaoSocial] = useState("");
-    const [cnpj, setCnpj] = useState("");
-    const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { 
+  Search, 
+  RefreshCw, 
+  Bell,
+  Volume2,
+  VolumeX,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  FilterX
+} from 'lucide-react';
+import { getAllPedidos } from '../../../services/pedidoService';
+import { type Pedido } from '../../../types';
+import OrderList from '../../../components/Admin/Order/OrderList';
+import OrderGrid from '../../../components/Admin/Order/OrderGrid';
+import OrderDetail from '../../../components/Admin/Order/OrderDetail';
+import Sidebar from '../../../components/Admin/Sidebar';
+import DateRangePicker from '../../../components/Common/DateRangePicker';
+import { toast } from 'react-toastify';
 
-    // PAGINAÇÃO
-    const [currentPage, setCurrentPage] = useState(1);
-    const ordersPerPage = 9;
+interface Props {
+  isDarkMode: boolean;
+  toggleTheme: () => void;
+}
 
-    const fetchOrders = async () => {
-        try {
-            setIsLoading(true);
-            const [fetchedOrders, config, formasPagamentoData] = await Promise.all([
-                getAllPedidos(),
-                getConfig(),
-                getAllFormasPagamento(),
-            ]);
-            setOrders(fetchedOrders);
-            setTaxaEntrega(config.taxaEntrega);
-            setRazaoSocial(config.razaoSocial);
-            setCnpj(config.cnpj);
-            setFormasPagamento(formasPagamentoData);
-        } catch (err) {
-            setError("Não foi possível carregar os pedidos.");
-            toast.error("Erro ao carregar os pedidos.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+const UNREAD_ORDERS_KEY = 'gs-sabores-unread-orders';
+const VIEW_MODE_KEY = 'gs-sabores-order-view-mode';
+const ITEMS_PER_PAGE = 8;
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
+export default function OrderManagment({ isDarkMode, toggleTheme }: Props) {
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [silentLoading, setSilentLoading] = useState(false);
+  
+  // Estados de Filtro
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  
+  // Estados de Visualização com Persistência
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    const saved = localStorage.getItem(VIEW_MODE_KEY);
+    return (saved as 'table' | 'grid') || 'grid';
+  });
 
-    // Resetar para a página 1 quando mudar o filtro ou a busca
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [statusFilter, searchId]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [hasUnread, setHasUnread] = useState(false);
 
-    const handleStatusChange = async (
-        orderId: number,
-        newStatus: Pedido["situacaoPedido"]
-    ) => {
-        try {
-            await updatePedido(orderId, { situacaoPedido: newStatus });
-            toast.success(`Status do pedido #${orderId} atualizado para ${newStatus}.`);
-            fetchOrders();
-        } catch (err) {
-            toast.error("Erro ao atualizar o status do pedido.");
-        }
-    };
+  const lastOrderIds = useRef<Set<number>>(new Set());
+  const isInitialLoad = useRef(true);
 
-    const openModal = (order: Pedido) => {
-        setSelectedOrder(order);
-        setIsModalOpen(true);
-    };
+  // Salvar preferência de visualização
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
-    const openReceiptModal = (e: React.MouseEvent | null, order: Pedido) => {
-        if (e) e.stopPropagation();
-        setSelectedOrder(order);
-        setIsReceiptModalOpen(true);
+  useEffect(() => {
+    if ("Notification" in window) {
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
     }
+    localStorage.setItem(UNREAD_ORDERS_KEY, 'false');
+    window.dispatchEvent(new Event('storage-update'));
+    setHasUnread(false);
+  }, []);
 
-    const calculateSubtotal = (order: Pedido) => {
-        return order.itensPedido?.reduce((sum, item) => sum + Number(item.precoUnitario) * item.quantidade, 0) || 0;
-    };
+  const playNotificationSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5);
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    } catch (e) { console.error(e); }
+  }, [soundEnabled]);
 
-    const getPaymentMethodName = (formaPagamentoId: number | null | undefined) => {
-        const forma = formasPagamento.find(fp => fp.id === formaPagamentoId);
-        return forma ? forma.nomeFormaPagamento : "Não informado";
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (silent) setSilentLoading(true);
+    else setLoading(true);
+
+    try {
+      const data = await getAllPedidos();
+      const ordersArray = Array.isArray(data) ? data : (data as any).rows || [];
+      const sorted = [...ordersArray].sort((a, b) => Number(b.id) - Number(a.id));
+
+      const currentIds = new Set(sorted.map(p => p.id));
+      
+      if (!isInitialLoad.current && lastOrderIds.current.size > 0) {
+        const newOrders = sorted.filter(p => !lastOrderIds.current.has(p.id));
+        if (newOrders.length > 0) {
+          playNotificationSound();
+          toast.info('🔔 Novo pedido recebido!', { autoClose: 5000 });
+          localStorage.setItem(UNREAD_ORDERS_KEY, 'true');
+          window.dispatchEvent(new Event('storage-update'));
+          setHasUnread(true);
+        }
+      }
+
+      lastOrderIds.current = currentIds;
+      isInitialLoad.current = false;
+      setPedidos(sorted);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setSilentLoading(false);
     }
+  }, [playNotificationSound]);
 
-    const filteredOrders = orders.filter((order) => {
-        const matchStatus = statusFilter === "todos" || order.situacaoPedido === statusFilter;
-        const matchId = order.id.toString().includes(searchId);
-        return matchStatus && matchId;
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(() => fetchOrders(true), 15000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  // Lógica de Filtragem Multi-Critério
+  const filteredPedidos = useMemo(() => {
+    return pedidos.filter(p => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = 
+        p.nomeCliente?.toLowerCase().includes(term) || 
+        p.id.toString().includes(term) ||
+        p.telefoneCliente?.includes(term);
+
+      const matchesStatus = statusFilter === 'todos' || p.situacaoPedido === statusFilter;
+
+      let matchesDate = true;
+      const orderDate = new Date(p.createdAt).toISOString().split('T')[0];
+      
+      if (dateRange.start && orderDate < dateRange.start) matchesDate = false;
+      if (dateRange.end && orderDate > dateRange.end) matchesDate = false;
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
+  }, [pedidos, searchTerm, statusFilter, dateRange]);
 
-    // PAGINAÇÃO
-    const indexOfLastOrder = currentPage * ordersPerPage;
-    const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-    const paginatedOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  const totalPages = Math.ceil(filteredPedidos.length / ITEMS_PER_PAGE);
+  const currentPedidos = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPedidos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredPedidos, currentPage]);
 
-    const handlePrintReceipt = async (order: Pedido) => {
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateRange]);
 
-        try {
-            // Simplesmente chama a função da API com o ID do pedido
-            const result = await printPedido(order.id);
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('todos');
+    setDateRange({ start: '', end: '' });
+  };
 
-            // Feedback de sucesso (você pode substituir por um toast, snackbar, etc.)
-            toast.success('Pedido enviado para a impressora com sucesso!');
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
+      <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
 
-        } catch (error: any) {
-            // Feedback de erro
-            console.error("Falha ao imprimir o pedido:", error);
-            const errorMessage = error.response?.data?.message || 'Não foi possível enviar o pedido para a impressão.';
-            alert(`Erro: ${errorMessage}`);
-        }
-    };
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-20 flex items-center justify-between px-8 shrink-0 transition-colors">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight transition-colors">Operação de Pedidos</h1>
+            {silentLoading && (
+              <div className="flex items-center gap-2">
+                <RefreshCw size={14} className="animate-spin text-orange-500" />
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Sincronizando</span>
+              </div>
+            )}
+          </div>
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-gray-600">Carregando pedidos...</p>
+          <div className="flex items-center gap-4">
+            {/* Seletor de Visualização Melhorado */}
+            <div className="bg-slate-100 dark:bg-slate-800 p-1.5 rounded-[1.25rem] flex items-center gap-1 transition-all shadow-inner">
+              <button 
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  viewMode === 'grid' 
+                  ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-lg shadow-slate-200/50 dark:shadow-none' 
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+                title="Modo Grade"
+              >
+                <LayoutGrid size={14} /> <span className="hidden sm:inline">Grade</span>
+              </button>
+              <button 
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  viewMode === 'table' 
+                  ? 'bg-white dark:bg-slate-700 text-orange-600 shadow-lg shadow-slate-200/50 dark:shadow-none' 
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+                title="Modo Tabela"
+              >
+                <List size={14} /> <span className="hidden sm:inline">Tabela</span>
+              </button>
             </div>
-        );
-    }
 
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-red-600">{error}</p>
-            </div>
-        );
-    }
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
 
-    return (
-        <div className="min-h-screen flex bg-gray-100">
-            <main className="flex flex-1 bg-gray-100 print:hidden">
-                <Sidebar />
-                <div className="p-6 flex-1">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Pedidos</h1>
+            <button 
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`p-2.5 rounded-xl transition-all border ${soundEnabled ? 'text-orange-500 border-orange-100 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800' : 'text-slate-400 border-slate-200 dark:border-slate-800'}`}
+            >
+              {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+            </button>
+            
+            <button className="relative p-2.5 text-slate-500 dark:text-slate-400 transition-colors">
+              <Bell size={22} />
+              {hasUnread && <span className="absolute top-2.5 right-2.5 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>}
+            </button>
+          </div>
+        </header>
 
-                    {/* Filtros e busca */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                        <div className="flex gap-2 flex-wrap">
-                            {["todos", "preparando", "entrega", "finalizado", "cancelado"].map((status) => (
-                                <button
-                                    key={status}
-                                    onClick={() => setStatusFilter(status as any)}
-                                    className={`px-4 py-1 rounded-full text-sm font-medium border ${statusFilter === status
-                                        ? "bg-indigo-600 text-white border-indigo-600"
-                                        : "text-gray-600 hover:text-indigo-600 border-gray-300"
-                                        } transition`}
-                                >
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                </button>
-                            ))}
-                        </div>
-
-                        <input
-                            type="text"
-                            placeholder="Buscar por ID do pedido..."
-                            value={searchId}
-                            onChange={(e) => setSearchId(e.target.value)}
-                            className="px-4 py-2 border rounded-lg w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                    </div>
-
-                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredOrders.length > 0 ? (
-                            paginatedOrders.map((order) => (
-                                <div
-                                    key={order.id}
-                                    className="bg-white shadow-md rounded-xl p-5 flex flex-col justify-between border border-gray-100 cursor-pointer"
-                                    onClick={() => openModal(order)}
-                                >
-                                    <div className="flex flex-col justify-between mb-2">
-                                        <h2 className="text-lg font-semibold text-indigo-600">Pedido Nº{order.id}</h2>
-                                        {order.situacaoPedido === "preparando" && (
-                                            <span className="flex items-center gap-1 text-yellow-600 text-sm"><Clock size={16} /> Preparando Pedido</span>
-                                        )}
-                                        {order.situacaoPedido === "entrega" && (
-                                            <span className="flex items-center gap-1 text-blue-600 text-sm"><Truck size={16} /> Saiu para Entrega</span>
-                                        )}
-                                        {order.situacaoPedido === "finalizado" && (
-                                            <span className="flex items-center gap-1 text-green-600 text-sm"><BadgeCheck size={16} /> Finalizado</span>
-                                        )}
-                                        {order.situacaoPedido === "cancelado" && (
-                                            <span className="flex items-center gap-1 text-red-600 text-sm"><XCircle size={16} /> Cancelado</span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-gray-600 mb-1"><strong>Cliente:</strong> {order.nomeCliente}</p>
-                                    <ul className="mb-3 text-sm text-gray-700">
-                                        {order.itensPedido?.map((item, index) => (
-                                            <li key={index} className="mb-1">
-                                                - {item.produto?.nomeProduto} x {item.quantidade}
-                                                {item.subItensPedido && item.subItensPedido.length > 0 && (
-                                                    <ul className="pl-5 text-xs text-gray-500">
-                                                        {item.subItensPedido.map((subItem) => (
-                                                            <li key={subItem.id}>• {subItem.subproduto?.nomeSubProduto}</li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                    <p className="text-gray-800 font-semibold mb-3">Total: R$ {Number(order.valorTotalPedido)?.toFixed(2)}</p>
-                                    <div className="flex justify-between items-center gap-2">
-                                        <div className="flex-grow flex gap-2">
-                                            {order.situacaoPedido === "preparando" && (
-                                                <>
-                                                    <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 rounded-lg transition" onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, "entrega"); }}>Saiu para Entrega</button>
-                                                    <button className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition" onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, "cancelado"); }}>Cancelar</button>
-                                                </>
-                                            )}
-                                            {order.situacaoPedido === "entrega" && (
-                                                <>
-                                                    <button className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-2 rounded-lg transition" onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, "finalizado"); }}>Finalizar</button>
-                                                    <button className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition" onClick={(e) => { e.stopPropagation(); handleStatusChange(order.id, "cancelado"); }}>Cancelar</button>
-                                                </>
-                                            )}
-                                            {order.situacaoPedido !== "preparando" && order.situacaoPedido !== "entrega" && (
-                                                <button className="w-full bg-gray-200 text-gray-700 text-sm py-2 rounded-lg cursor-not-allowed" disabled>Pedido {order.situacaoPedido}</button>
-                                            )}
-                                        </div>
-                                        <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 p-2 rounded-lg transition" onClick={(e) => openReceiptModal(e, order)}>
-                                            <Printer size={20} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-gray-500 col-span-full">Nenhum pedido encontrado.</p>
-                        )}
-                    </div>
-
-                    {/* Paginação */}
-                    {totalPages > 1 && (
-                        <div className="flex justify-center mt-8 space-x-2">
-                            <button
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage((prev) => prev - 1)}
-                                className="px-3 py-1 border rounded disabled:opacity-50"
-                            >
-                                Anterior
-                            </button>
-                            {Array.from({ length: totalPages }, (_, i) => (
-                                <button
-                                    key={i + 1}
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    className={`px-3 py-1 border rounded ${currentPage === i + 1 ? "bg-indigo-600 text-white" : ""}`}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
-                            <button
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage((prev) => prev + 1)}
-                                className="px-3 py-1 border rounded disabled:opacity-50"
-                            >
-                                Próximo
-                            </button>
-                        </div>
-                    )}
-
-                    {isModalOpen && selectedOrder && (
-                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:hidden">
-                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative ring ring-gray-200 ring-opacity-50">
-                                <button className="absolute top-4 right-4 text-gray-500 hover:text-gray-700" onClick={() => setIsModalOpen(false)}>
-                                    <X size={24} />
-                                </button>
-                                <h2 className="text-xl font-bold mb-4 text-indigo-600">Detalhes do Pedido #{selectedOrder.id}</h2>
-                                <div className="space-y-2 text-gray-700">
-                                    <p><strong>Cliente:</strong> {selectedOrder.nomeCliente}</p>
-                                    <p><strong>Telefone:</strong> {selectedOrder.telefoneCliente}</p>
-                                    <p><strong>Endereço:</strong> {selectedOrder.logadouroCliente}, {selectedOrder.numeroCliente} - {selectedOrder.bairroCliente}, {selectedOrder.cidadeCliente} - {selectedOrder.estadoCliente}</p>
-                                    <p><strong>Forma de Pagamento:</strong> {getPaymentMethodName(selectedOrder.formaPagamento_id)}</p>
-                                    <h3 className="font-semibold pt-2">Itens do Pedido:</h3>
-                                    <ul className="list-disc list-inside space-y-2">
-                                        {selectedOrder.itensPedido?.map((item) => (
-                                            <li key={item.id}>
-                                                {item.quantidade}x {item.produto?.nomeProduto} (R$ {Number(item.precoUnitario)?.toFixed(2)} cada)
-                                                {item.subItensPedido && item.subItensPedido.length > 0 && (
-                                                    <ul className="list-['-_'] list-inside pl-4 text-sm text-gray-600">
-                                                        {item.subItensPedido.map(subItem => (
-                                                            <li key={subItem.id}>{subItem.subproduto?.nomeSubProduto} (+ R$ {Number(subItem.precoAdicional)?.toFixed(2)})</li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <p className="text-lg font-bold pt-2">Valor Total: R$ {Number(selectedOrder.valorTotalPedido)?.toFixed(2)}</p>
-                                </div>
-                                <div className="flex justify-end gap-2 mt-4">
-                                    {selectedOrder.situacaoPedido === "preparando" && (<button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition" onClick={() => handleStatusChange(selectedOrder.id, "entrega")}>Saiu para Entrega</button>)}
-                                    {selectedOrder.situacaoPedido === "entrega" && (<button className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition" onClick={() => handleStatusChange(selectedOrder.id, "finalizado")}>Finalizar</button>)}
-                                    {(selectedOrder.situacaoPedido === "preparando" || selectedOrder.situacaoPedido === "entrega") && (<button className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition" onClick={() => handleStatusChange(selectedOrder.id, "cancelado")}>Cancelar</button>)}
-                                    <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition" onClick={() => openReceiptModal(null, selectedOrder)}>Imprimir Recibo</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {isReceiptModalOpen && selectedOrder && (
-                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 print:hidden">
-                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 relative ring ring-gray-200 ring-opacity-50">
-                                <div className="text-center mb-4">
-                                    <h2 className="text-xl font-bold">Recibo Pedido #{selectedOrder.id}</h2>
-                                    <p className="text-sm text-gray-600">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                                </div>
-                                <div className="mb-4 text-center">
-                                    <h3 className="font-bold">{razaoSocial}</h3>
-                                    <p className="text-sm text-gray-600">CNPJ: {cnpj}</p>
-                                </div>
-                                <div className="mb-4 border-b border-dashed border-gray-400 pb-2">
-                                    <h3 className="font-semibold text-gray-800">Cliente: {selectedOrder.nomeCliente}</h3>
-                                    <p className="text-sm text-gray-600">Telefone: {selectedOrder.telefoneCliente}</p>
-                                    <p className="text-sm text-gray-600">Pagamento: {getPaymentMethodName(selectedOrder.formaPagamento_id)}</p>
-                                </div>
-                                <div className="mb-4">
-                                    <h3 className="font-semibold text-gray-800">Itens:</h3>
-                                    <ul className="space-y-2 text-sm text-gray-700">
-                                        {selectedOrder.itensPedido?.map((item) => (
-                                            <li key={item.id} className="flex flex-col">
-                                                <div className="flex justify-between">
-                                                    <span>{item.quantidade}x {item.produto?.nomeProduto}</span>
-                                                    <span>R$ {(Number(item.precoUnitario) * item.quantidade)?.toFixed(2)}</span>
-                                                </div>
-                                                {item.subItensPedido && item.subItensPedido.length > 0 && (
-                                                    <ul className="pl-4 text-xs text-gray-500">
-                                                        {item.subItensPedido.map(subItem => (
-                                                            <li key={subItem.id} className="flex justify-between">
-                                                                <span>&nbsp;&nbsp;&nbsp;- {subItem.subproduto?.nomeSubProduto}</span>
-                                                                <span>+ R$ {Number(subItem.precoAdicional)?.toFixed(2)}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div className="border-t border-dashed border-gray-400 pt-2 text-gray-800">
-                                    <div className="flex justify-between mb-1"><span className="font-semibold">Subtotal:</span><span>R$ {Number(calculateSubtotal(selectedOrder))?.toFixed(2)}</span></div>
-                                    <div className="flex justify-between"><span className="font-semibold">Taxa de Entrega:</span><span>R$ {Number(taxaEntrega)?.toFixed(2)}</span></div>
-                                    <div className="flex justify-between font-bold text-lg mt-1"><span >Total:</span><span>R$ {Number(selectedOrder.valorTotalPedido)?.toFixed(2)}</span></div>
-                                </div>
-                                <div className="text-center mt-4 text-sm text-gray-500"><p>Obrigado pelo seu pedido!</p></div>
-                                <div className="flex justify-end gap-2 mt-4 print:hidden">
-                                    <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition" onClick={() => setIsReceiptModalOpen(false)}>Fechar</button>
-                                    <button className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition" onClick={() => handlePrintReceipt(selectedOrder)}>Imprimir</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="max-w-7xl mx-auto space-y-6">
+            
+            {/* Barra de Filtros Avançada */}
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                <div className="lg:col-span-5 space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 transition-colors">Busca por Cliente ou ID</label>
+                  <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="Nome, ID ou Telefone..."
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 outline-none focus:ring-4 focus:ring-orange-500/10 dark:text-slate-100 transition-all"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-            </main>
-            <ToastContainer />
+
+                <div className="lg:col-span-6">
+                  <DateRangePicker 
+                    range={dateRange}
+                    onChange={setDateRange}
+                    label="Período de Pedidos"
+                  />
+                </div>
+
+                <div className="lg:col-span-1">
+                  <button 
+                    onClick={clearFilters}
+                    className="w-full aspect-square bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-2xl flex items-center justify-center transition-all shadow-sm active:scale-95"
+                    title="Limpar Filtros"
+                  >
+                    <FilterX size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar pt-2 border-t border-slate-50 dark:border-slate-800 transition-colors">
+                {['todos', 'preparando', 'entrega', 'finalizado', 'cancelado'].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                      statusFilter === status 
+                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
+                      : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-slate-500'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Listagem */}
+            <div className="min-h-[400px]">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-32 gap-4">
+                  <RefreshCw className="animate-spin text-orange-500" size={32} />
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Sincronizando banco de dados...</p>
+                </div>
+              ) : currentPedidos.length > 0 ? (
+                <>
+                  <div className="animate-in fade-in duration-500">
+                    {viewMode === 'table' ? (
+                      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                        <OrderList pedidos={currentPedidos} onViewDetails={(id) => setSelectedPedido(pedidos.find(p => p.id === id) || null)} />
+                      </div>
+                    ) : (
+                      <OrderGrid pedidos={currentPedidos} onViewDetails={(id) => setSelectedPedido(pedidos.find(p => p.id === id) || null)} />
+                    )}
+                  </div>
+
+                  {/* Paginação */}
+                  {totalPages > 1 && (
+                    <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 transition-colors">
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest transition-colors">
+                        Mostrando {currentPedidos.length} de {filteredPedidos.length} pedidos
+                      </p>
+                      
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 disabled:opacity-30 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-500 transition-all active:scale-95"
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        
+                        <div className="flex items-center gap-1">
+                          {[...Array(totalPages)].map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setCurrentPage(i + 1)}
+                              className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${
+                                currentPage === i + 1 
+                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
+                                : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-600'
+                              }`}
+                            >
+                              {i + 1}
+                            </button>
+                          ))}
+                        </div>
+
+                        <button 
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 disabled:opacity-30 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-500 transition-all active:scale-95"
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-white dark:bg-slate-900 py-32 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center px-6 transition-colors">
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
+                    <Search size={32} className="text-slate-200 dark:text-slate-700" />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 transition-colors">Nenhum pedido encontrado</h3>
+                  <p className="text-slate-400 dark:text-slate-500 text-sm font-medium mt-2 max-w-xs transition-colors">Tente ajustar seus filtros de busca, status ou data para encontrar o que procura.</p>
+                  <button onClick={clearFilters} className="mt-6 text-xs font-black uppercase text-orange-500 hover:underline">Limpar filtros</button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-    );
+      </main>
+
+      {selectedPedido && (
+        <OrderDetail pedido={selectedPedido} onClose={() => setSelectedPedido(null)} onStatusUpdate={() => fetchOrders(true)} />
+      )}
+    </div>
+  );
 }

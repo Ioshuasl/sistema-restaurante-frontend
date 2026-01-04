@@ -1,174 +1,214 @@
-import { useState, useEffect } from 'react';
-import { Bar, Pie } from 'react-chartjs-2';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    ArcElement,
-    Tooltip,
-    Legend,
-} from 'chart.js';
-import { Link } from 'react-router-dom';
-import Sidebar from '../Components/Sidebar';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { getTotalOrders, getMonthlyRevenue, getMonthlyOrderCounts, getPaymentMethodDistribution } from '../../../services/dashboardService';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
+import React, { useEffect, useState, useCallback } from 'react';
+import { 
+  TrendingUp, 
+  Users, 
+  ShoppingBag, 
+  Bell,
+  Search,
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart3,
+  Clock,
+  ChevronRight,
+  DollarSign
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
+import { getMonthlyRevenue, getTotalOrders } from '../../../services/dashboardService';
+import { getAllPedidos } from '../../../services/pedidoService';
+import { type Pedido } from '../../../types';
+import Sidebar from '../../../components/Admin/Sidebar';
 
-export default function Dashboard() {
-    const [totalPedidos, setTotalPedidos] = useState(0);
-    const [rendimentoMensal, setRendimentoMensal] = useState(0);
-    const [pedidosMensaisData, setPedidosMensaisData] = useState({
-        labels: [] as string[],
-        datasets: [{
-            label: 'Pedidos',
-            data: [] as number[],
-            backgroundColor: '#4f46e5',
-        }],
-    });
-    const [formaPagamentoData, setFormaPagamentoData] = useState({
-        labels: [] as string[],
-        datasets: [{
-            data: [] as number[],
-            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#6b7280'],
-        }],
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [
-                    totalPedidosData,
-                    rendimentoMensalData,
-                    pedidosMensais,
-                    formaPagamento,
-                ] = await Promise.all([
-                    getTotalOrders(),
-                    getMonthlyRevenue(),
-                    getMonthlyOrderCounts(),
-                    getPaymentMethodDistribution(),
-                ]);
-
-                // Atualiza o estado dos KPIs
-                setTotalPedidos(totalPedidosData);
-                setRendimentoMensal(rendimentoMensalData.totalRevenue);
-
-                // Processa os dados para o Gráfico de Barras
-                const monthlyLabels = pedidosMensais.map((item: any) => {
-                    const date = new Date(item.month);
-                    return date.toLocaleString('default', { month: 'short' });
-                });
-                const monthlyCounts = pedidosMensais.map((item: any) => item.count);
-                setPedidosMensaisData({
-                    labels: monthlyLabels,
-                    datasets: [{
-                        label: 'Pedidos',
-                        data: monthlyCounts,
-                        backgroundColor: '#4f46e5',
-                    }],
-                });
-
-                // Processa os dados para o Gráfico de Pizza
-                const paymentLabels = formaPagamento.map((item: any) => item.label);
-                const paymentValues = formaPagamento.map((item: any) => item.value);
-                setFormaPagamentoData({
-                    labels: paymentLabels,
-                    datasets: [{
-                        data: paymentValues,
-                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#6b7280'],
-                    }],
-                });
-
-            } catch (err) {
-                setError("Não foi possível carregar os dados do dashboard.");
-                toast.error("Erro ao carregar dados do dashboard.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-gray-600">Carregando dados...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-red-600">{error}</p>
-            </div>
-        );
-    }
-
-    return (
-        <div className="min-h-screen flex bg-gray-100">
-            <title>Dashboard</title>
-
-            <main className="flex flex-1 bg-gray-100">
-                <Sidebar />
-                <div className='flex-1 p-6'>
-
-                    <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
-
-                    {/* Cards de KPIs */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div className="bg-white rounded-xl shadow p-6">
-                            <h2 className="text-gray-500 text-sm font-medium">Total de Pedidos</h2>
-                            <p className="text-2xl font-bold text-gray-800 mt-2">{totalPedidos}</p>
-                        </div>
-                        <div className="bg-white rounded-xl shadow p-6">
-                            <h2 className="text-gray-500 text-sm font-medium">Rendimento Mensal</h2>
-                            <p className="text-2xl font-bold text-gray-800 mt-2">R$ {rendimentoMensal.toFixed(2)}</p>
-                        </div>
-                    </div>
-
-                    {/* Gráficos */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Gráfico de Barras */}
-                        <div className="bg-white rounded-xl shadow p-6 h-[300px] flex flex-col">
-                            <h3 className="text-lg font-semibold text-gray-700 mb-4">Pedidos por Mês</h3>
-                            <div className="flex-1">
-                                <Bar
-                                    data={pedidosMensaisData}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: { display: false },
-                                        },
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Gráfico de Pizza */}
-                        <div className="bg-white rounded-xl shadow p-6 h-[300px] flex flex-col">
-                            <h3 className="text-lg font-semibold text-gray-700 mb-4">Formas de Pagamento</h3>
-                            <div className="flex-1">
-                                <Pie
-                                    data={formaPagamentoData}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </main>
-            <ToastContainer />
-        </div>
-    );
+interface Props {
+  isDarkMode: boolean;
+  toggleTheme: () => void;
 }
+
+const UNREAD_ORDERS_KEY = 'gs-sabores-unread-orders';
+
+const DashBoard: React.FC<Props> = ({ isDarkMode, toggleTheme }) => {
+  const [revenue, setRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [recentOrders, setRecentOrders] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasUnread, setHasUnread] = useState(false);
+  const navigate = useNavigate();
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [revData, ordCount, allPedidos] = await Promise.all([
+        getMonthlyRevenue(),
+        getTotalOrders(),
+        getAllPedidos()
+      ]);
+      setRevenue(revData.totalRevenue || 0);
+      setTotalOrders(ordCount || 0);
+      
+      const ordersArray = Array.isArray(allPedidos) ? allPedidos : (allPedidos as any).rows || [];
+      setRecentOrders(ordersArray.slice(0, 5)); // Apenas os 5 mais recentes
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const checkUnread = () => {
+      setHasUnread(localStorage.getItem(UNREAD_ORDERS_KEY) === 'true');
+    };
+    checkUnread();
+    window.addEventListener('storage-update', checkUnread);
+    window.addEventListener('storage', checkUnread);
+    
+    fetchData();
+
+    return () => {
+      window.removeEventListener('storage-update', checkUnread);
+      window.removeEventListener('storage', checkUnread);
+    };
+  }, [fetchData]);
+
+  const stats = [
+    { label: 'Receita Mensal', value: `R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/20', trend: '+12.5%', isUp: true },
+    { label: 'Total de Pedidos', value: totalOrders, icon: ShoppingBag, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/20', trend: '+5.2%', isUp: true },
+    { label: 'Novos Clientes', value: '124', icon: Users, color: 'text-violet-600', bg: 'bg-violet-100 dark:bg-violet-900/20', trend: '-2.4%', isUp: false },
+    { label: 'Ticket Médio', value: `R$ ${(revenue / (totalOrders || 1)).toFixed(2)}`, icon: BarChart3, color: 'text-orange-600', bg: 'bg-orange-100 dark:bg-orange-900/20', trend: '+8.1%', isUp: true },
+  ];
+
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="animate-spin h-10 w-10 border-4 border-orange-500 border-t-transparent rounded-full"></div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
+      <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-20 flex items-center justify-between px-8 shrink-0 transition-colors">
+          <div className="relative w-96 hidden md:block">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Pesquisar pedidos ou clientes..." 
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2.5 pl-10 pr-4 outline-none dark:text-slate-100 transition-all focus:ring-2 focus:ring-orange-500/20"
+            />
+          </div>
+
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => navigate('/admin/order')}
+              className="relative p-2 text-slate-500 dark:text-slate-400 hover:text-orange-500 transition-colors"
+            >
+              <Bell className="h-6 w-6" />
+              {hasUnread && (
+                <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
+              )}
+            </button>
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-bold dark:text-slate-100">Admin GS</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Painel de Controle</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold border border-slate-200 dark:border-slate-700">AD</div>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="flex justify-between items-end mb-8">
+            <div>
+              <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight transition-colors">Visão Geral do Negócio</h1>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Bem-vindo de volta! Aqui está o que aconteceu hoje.</p>
+            </div>
+            <Link 
+              to="/admin/order" 
+              className="bg-orange-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+            >
+              Ver Todos os Pedidos
+            </Link>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            {stats.map((stat, idx) => (
+              <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col transition-all hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none group">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} transition-transform group-hover:scale-110`}><stat.icon className="h-6 w-6" /></div>
+                  <div className={`flex items-center gap-1 text-xs font-black ${stat.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {stat.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                    {stat.trend}
+                  </div>
+                </div>
+                <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">{stat.label}</p>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 transition-colors">{stat.value}</h3>
+              </div>
+            ))}
+          </div>
+
+          {/* Recent Orders List */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col transition-colors">
+              <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
+                  <Clock size={20} className="text-orange-500" /> Pedidos Recentes
+                </h2>
+                <Link to="/admin/order" className="text-xs font-black text-orange-600 dark:text-orange-500 uppercase tracking-widest hover:underline">Ver Histórico</Link>
+              </div>
+              <div className="flex-1">
+                {recentOrders.length > 0 ? (
+                  <div className="divide-y divide-slate-50 dark:divide-slate-800">
+                    {recentOrders.map((order) => (
+                      <div key={order.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex items-center justify-between group cursor-pointer" onClick={() => navigate('/admin/order')}>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-slate-400">#{order.id}</div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{order.nomeCliente}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {order.isRetiradaEstabelecimento ? 'Retirada' : 'Entrega'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-sm font-black text-slate-900 dark:text-slate-100">R$ {Number(order.valorTotalPedido).toFixed(2)}</p>
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+                              order.situacaoPedido === 'preparando' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+                            }`}>
+                              {order.situacaoPedido}
+                            </span>
+                          </div>
+                          <ChevronRight size={18} className="text-slate-300 group-hover:text-orange-500 transition-colors" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-20 flex flex-col items-center justify-center opacity-40">
+                    <ShoppingBag size={48} className="text-slate-300 mb-4" />
+                    <p className="font-bold text-slate-500">Nenhum pedido hoje</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-orange-600 rounded-[2.5rem] p-8 text-white flex flex-col justify-between shadow-2xl shadow-orange-500/20 relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div>
+                <div className="bg-white/20 p-4 rounded-3xl w-fit mb-6 backdrop-blur-md">
+                   <BarChart3 size={32} />
+                </div>
+                <h2 className="text-2xl font-black leading-tight mb-2">Maximize sua Operação</h2>
+                <p className="text-orange-100 text-sm font-medium leading-relaxed">Analise seus produtos mais vendidos e ajuste seu estoque para evitar perdas.</p>
+              </div>
+              <button className="mt-8 bg-white text-orange-600 w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl hover:bg-orange-50 transition-all active:scale-95">Relatórios Completos</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default DashBoard;

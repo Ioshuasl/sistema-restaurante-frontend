@@ -1,90 +1,53 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { CheckCircle, Phone } from 'lucide-react';
+
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { CheckCircle2, MessageCircle } from 'lucide-react';
 import { getConfig } from '../../../services/configService';
 
-export default function PedidoConfirmado() {
-  const navigate = useNavigate();
-  const location = useLocation();
+const PedidoConfirmado: React.FC = () => {
+    // Fix: Use 'react-router' instead of 'react-router-dom' to resolve missing export member error
+    const navigate = useNavigate();
+    const [phone, setPhone] = useState('');
 
-  // Estados para gerenciar o telefone, carregamento e erros
-  const [telefone, setTelefone] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    useEffect(() => {
+        getConfig().then(cfg => {
+            if (cfg?.telefone) setPhone(cfg.telefone.replace(/\D/g, ''));
+        });
+    }, []);
 
-  // Obtém o ID do pedido do estado de navegação, com um fallback
-  const pedidoId = location.state?.pedidoId || 'Não informado';
-
-  // Efeito para buscar as configurações do sistema
-  useEffect(() => {
-    const fetchConfigData = async () => {
-      try {
-        const config = await getConfig();
-        setTelefone(config.telefone); // Atualiza o estado com o telefone da API
-      } catch (err) {
-        setError("Não foi possível carregar o telefone do restaurante.");
-      } finally {
-        setIsLoading(false);
-      }
+    const handleWhatsAppRedirect = () => {
+        const message = encodeURIComponent(`Olá! Gostaria de informações sobre o meu pedido que acabei de realizar pelo cardápio digital.`);
+        window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
     };
 
-    fetchConfigData();
-  }, []);
-
-  // Formata o telefone para ser usado no link do WhatsApp (remove caracteres não numéricos)
-  const formatWhatsappNumber = (phone: string) => {
-    return phone.replace(/\D/g, '');
-  };
-
-  const formattedPhoneNumber = formatWhatsappNumber(telefone);
-  const message = encodeURIComponent(`Olá, acabei de fazer o pedido de Nº ${pedidoId} e tenho uma dúvida.`);
-
-  // Lógicas de renderização
-  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-green-50">
-        <p className="text-xl text-green-700">Carregando informações...</p>
-      </div>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-8 text-center transition-colors duration-300">
+            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mb-8 animate-bounce">
+                <CheckCircle2 size={48} />
+            </div>
+            <h1 className="text-4xl font-black text-slate-800 dark:text-slate-100 mb-4 tracking-tight">Pedido Recebido!</h1>
+            <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-sm font-medium leading-relaxed">
+                Seu pedido já foi enviado para a nossa cozinha e em breve estará pronto.
+            </p>
+            
+            <div className="flex flex-col gap-4 w-full max-w-xs">
+                <button 
+                    onClick={handleWhatsAppRedirect}
+                    className="bg-green-500 text-white w-full py-5 rounded-3xl font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-xl shadow-green-100 dark:shadow-none flex items-center justify-center gap-3 active:scale-95"
+                >
+                    <MessageCircle size={22} />
+                    Falar no WhatsApp
+                </button>
+
+                <button 
+                    onClick={() => navigate('/')} 
+                    className="bg-slate-800 dark:bg-slate-700 text-white w-full py-5 rounded-3xl font-black uppercase tracking-widest hover:bg-black dark:hover:bg-slate-600 transition shadow-xl shadow-slate-200 dark:shadow-none active:scale-95"
+                >
+                    Voltar ao Início
+                </button>
+            </div>
+        </div>
     );
-  }
+};
 
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-red-50">
-        <p className="text-xl text-red-700">{error}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center text-center px-4">
-      <title>Pedido Confirmado</title>
-      <CheckCircle size={64} className="text-green-600 mb-4" />
-      <h1 className="text-2xl md:text-3xl font-bold text-green-700 mb-2">
-        Pedido Confirmado! <br /> Nº do Pedido: {pedidoId}
-      </h1>
-      <p className="text-gray-700 mb-6">
-        Obrigado pelo seu pedido. Em breve ele estará pronto!
-      </p>
-
-      <div className="flex flex-col md:flex-col gap-4 w-full max-w-xs">
-        <button
-          onClick={() => navigate('/')}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200 w-full"
-        >
-          Voltar ao Início
-        </button>
-
-        <a
-          href={`https://wa.me/55${formattedPhoneNumber}?text=${message}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 bg-white border border-green-600 text-green-700 hover:bg-green-100 font-semibold px-6 py-3 rounded-lg transition duration-200 w-full"
-        >
-          <Phone size={20} />
-          Falar com o Restaurante
-        </a>
-      </div>
-    </div>
-  );
-}
+export default PedidoConfirmado;
