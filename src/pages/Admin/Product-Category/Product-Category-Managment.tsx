@@ -5,7 +5,7 @@ import Sidebar from "../Components/Sidebar";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { type CategoriaProduto } from "../../../types/interfaces-types";
+import { type CategoriaProduto } from "../../../types";
 import {
     getAllCategoriasProdutos,
     updateCategoriaProduto,

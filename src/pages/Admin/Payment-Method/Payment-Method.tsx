@@ -4,7 +4,7 @@ import { Plus, Pencil, X } from "lucide-react";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { type FormaPagamento, type CreateFormaPagamentoPayload, type UpdateFormaPagamentoPayload } from '../../../types/interfaces-types';
+import { type FormaPagamento, type CreateFormaPagamentoPayload, type UpdateFormaPagamentoPayload } from '../../../types';
 import {
     getAllFormasPagamento,
     createFormaPagamento,

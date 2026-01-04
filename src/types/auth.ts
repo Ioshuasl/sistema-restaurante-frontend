@@ -1,5 +1,5 @@
 
-import { Cargo } from './cargo';
+import type { Cargo } from './cargo';
 
 export interface LoginPayload {
   username: string;

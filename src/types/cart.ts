@@ -1,5 +1,5 @@
 
-import { Produto, SubProduto, CategoriaProduto } from './product';
+import type { Produto, SubProduto, CategoriaProduto } from './product';
 
 export interface Menu extends CategoriaProduto {
   Produtos: Produto[];
