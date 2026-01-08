@@ -4,7 +4,8 @@ import Header from '../../../components/Public/Header';
 import CartDrawer from '../../../components/Public/CartDrawer';
 import OptionsModal from '../../../components/Public/OptionsModal';
 import { getMenu } from '../../../services/menuService';
-import { type Menu, type Produto, type CartItem, type SubProduto } from '../../../types';
+import { getConfig } from '../../../services/configService';
+import { type Menu, type Produto, type CartItem, type SubProduto } from '../../../types/';
 import { Loader2, WifiOff, SearchX, Plus, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -17,12 +18,18 @@ interface CardapioProps {
 }
 
 const CATEGORY_STORAGE_KEY = 'gs-sabores-last-category';
+const LAYOUT_STORAGE_KEY = 'gs-sabores-menu-layout';
 
 export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onCheckout }: CardapioProps) {
     const [menuData, setMenuData] = useState<Menu[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isOffline, setIsOffline] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const [menuLayout, setMenuLayout] = useState<'modern' | 'compact' | 'minimalist'>(() => {
+        const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+        return (saved as any) || 'modern';
+    });
     
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
@@ -35,15 +42,26 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const menu = await getMenu();
+            const [menu, config] = await Promise.all([
+                getMenu(),
+                getConfig()
+            ]);
+
             const normalizedMenu = menu.map((cat: any) => ({
                 ...cat,
                 Produtos: cat.Produtos || cat.produtos || []
             }));
+            
             setMenuData(normalizedMenu);
             setIsOffline(false);
+            
+            if (config && config.menuLayout) {
+                setMenuLayout(config.menuLayout);
+                localStorage.setItem(LAYOUT_STORAGE_KEY, config.menuLayout);
+            }
+            
         } catch (err: any) {
-            console.warn('Erro ao carregar menu real', err);
+            console.warn('Erro ao carregar dados do servidor', err);
             setIsOffline(true);
         } finally {
             setIsLoading(false);
@@ -51,8 +69,17 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
     };
 
     useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === LAYOUT_STORAGE_KEY && e.newValue) {
+                setMenuLayout(e.newValue as any);
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    useEffect(() => {
         fetchData();
-        
         if (isFirstMount.current && cart.length > 0) {
             toast.info('Seu carrinho foi recuperado!', {
                 icon: <RefreshCcw className="text-blue-500" />,
@@ -165,6 +192,93 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
         }
     };
 
+    const renderProductCard = (product: Produto) => {
+        if (menuLayout === 'compact') {
+            return (
+                <div 
+                    key={product.id} 
+                    onClick={() => handleProductClick(product)}
+                    className="group bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 flex items-center gap-4 cursor-pointer border border-transparent dark:border-slate-800"
+                >
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                        <img 
+                            src={product.image || `https://picsum.photos/seed/${product.id}/200`} 
+                            alt={product.nomeProduto} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+                        />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100 truncate mb-0.5">{product.nomeProduto}</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mb-2 font-medium">{product.descricao}</p>
+                        <span className="text-base font-black text-red-600 dark:text-red-400">R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}</span>
+                    </div>
+                    <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-red-600 group-hover:text-white transition-all">
+                        <Plus size={20} />
+                    </div>
+                </div>
+            );
+        }
+
+        if (menuLayout === 'minimalist') {
+            return (
+                <div 
+                    key={product.id} 
+                    onClick={() => handleProductClick(product)}
+                    className="group py-6 border-b border-slate-100 dark:border-slate-800/60 flex items-start justify-between gap-6 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 px-4 -mx-4 rounded-2xl transition-all duration-300"
+                >
+                    <div className="flex-1 space-y-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                            <h4 className="text-lg font-bold text-slate-800 dark:text-slate-100 group-hover:text-red-600 transition-colors duration-300">{product.nomeProduto}</h4>
+                            <div className="flex-1 border-b border-dashed border-slate-200 dark:border-slate-700 mb-1.5" />
+                            <span className="text-lg font-black text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                                R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}
+                            </span>
+                        </div>
+                        {product.descricao && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed italic line-clamp-2 max-w-2xl">
+                                {product.descricao}
+                            </p>
+                        )}
+                    </div>
+                    {product.image && (
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm">
+                            <img 
+                                src={product.image} 
+                                alt={product.nomeProduto} 
+                                className="w-full h-full group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" 
+                            />
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <div key={product.id} className="group bg-white dark:bg-slate-900 rounded-[2.5rem] p-5 shadow-sm hover:shadow-2xl hover:shadow-slate-200 dark:hover:shadow-slate-950 transition-all duration-300 flex flex-col border border-transparent dark:border-slate-800">
+                <div className="relative mb-6 overflow-hidden rounded-[2rem] aspect-[4/3]">
+                    <img 
+                        src={product.image || `https://picsum.photos/seed/${product.id}/400/300`} 
+                        alt={product.nomeProduto} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop';
+                        }}
+                    />
+                </div>
+                <div className="flex-1">
+                    <h4 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 mb-2 transition-colors duration-300">{product.nomeProduto}</h4>
+                    {product.descricao && <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">{product.descricao}</p>}
+                </div>
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors duration-300">
+                    <span className="text-2xl font-black text-slate-900 dark:text-slate-100 transition-colors duration-300">R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}</span>
+                    <button onClick={() => handleProductClick(product)} className="w-12 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-red-600 text-slate-900 dark:text-slate-100 hover:text-white rounded-2xl flex items-center justify-center transition-all">
+                        <Plus size={24} />
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 transition-colors duration-300">
@@ -218,31 +332,12 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                                {category.Produtos.map(product => (
-                                    <div key={product.id} className="group bg-white dark:bg-slate-900 rounded-[2.5rem] p-5 shadow-sm hover:shadow-2xl hover:shadow-slate-200 dark:hover:shadow-slate-950 transition-all duration-300 flex flex-col border border-transparent dark:border-slate-800">
-                                        <div className="relative mb-6 overflow-hidden rounded-[2rem] aspect-[4/3]">
-                                            <img 
-                                                src={product.image || `https://picsum.photos/seed/${product.id}/400/300`} 
-                                                alt={product.nomeProduto} 
-                                                className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop';
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 mb-2 transition-colors duration-300">{product.nomeProduto}</h4>
-                                            {product.descricao && <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">{product.descricao}</p>}
-                                        </div>
-                                        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors duration-300">
-                                            <span className="text-2xl font-black text-slate-900 dark:text-slate-100 transition-colors duration-300">R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}</span>
-                                            <button onClick={() => handleProductClick(product)} className="w-12 h-12 bg-slate-100 dark:bg-slate-800 hover:bg-red-600 text-slate-900 dark:text-slate-100 hover:text-white rounded-2xl flex items-center justify-center transition-all">
-                                                <Plus size={24} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className={`
+                                ${menuLayout === 'modern' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8' : ''}
+                                ${menuLayout === 'compact' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : ''}
+                                ${menuLayout === 'minimalist' ? 'grid grid-cols-1 lg:grid-cols-2 gap-x-12' : ''}
+                            `}>
+                                {category.Produtos.map(product => renderProductCard(product))}
                             </div>
                         </section>
                     ))

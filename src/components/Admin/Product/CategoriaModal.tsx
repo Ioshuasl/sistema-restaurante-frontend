@@ -27,7 +27,7 @@ const CategoriaModal: React.FC<CategoriaModalProps> = ({ onClose, onRefresh }) =
     setLoading(true);
     try {
       const data = await getAllCategoriasProdutos();
-      setCategorias(data);
+      setCategorias(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error("Erro ao carregar categorias.");
     } finally {

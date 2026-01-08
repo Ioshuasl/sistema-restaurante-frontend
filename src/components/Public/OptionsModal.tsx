@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { X, Plus, Minus, Check, MessageSquareText } from 'lucide-react';
-import { type Produto, type SubProduto, type CartItem } from '../../types';
+import { type Produto, type SubProduto, type CartItem } from '../../types/';
 
 interface OptionsModalProps {
     product: Produto;
@@ -71,8 +71,8 @@ export default function OptionsModal({ product, initialItem, onClose, onSave }: 
             <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col transition-colors duration-300">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between transition-colors">
                     <div>
-                        <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 transition-colors">{product.nomeProduto}</h2>
-                        <p className="text-sm text-slate-500 transition-colors">Personalize seu item</p>
+                        <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 transition-colors">Personalizar Pedido</h2>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{product.nomeProduto}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                         <X size={24} />
@@ -80,9 +80,33 @@ export default function OptionsModal({ product, initialItem, onClose, onSave }: 
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-white dark:bg-slate-900 custom-scrollbar transition-colors">
+                    
+                    {/* Header do Produto: Imagem e Descrição */}
+                    <div className="space-y-4">
+                        {product.image && (
+                            <div className="w-full aspect-[16/9] rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+                                <img 
+                                    src={product.image} 
+                                    alt={product.nomeProduto} 
+                                    className="w-full h-full object-cover" 
+                                />
+                            </div>
+                        )}
+                        <div className="px-2">
+                            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100">{product.nomeProduto}</h3>
+                            {product.descricao && (
+                                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed italic">
+                                    {product.descricao}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
+
                     {groups.length > 0 && groups.map(group => (
                         <div key={group.id} className="space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between px-2">
                                 <div>
                                     <h3 className="font-bold text-slate-800 dark:text-slate-100 transition-colors">{group.nomeGrupo}</h3>
                                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest transition-colors">
@@ -121,12 +145,12 @@ export default function OptionsModal({ product, initialItem, onClose, onSave }: 
                     ))}
 
                     <div className="space-y-3 pt-2">
-                        <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                        <div className="flex items-center gap-2 px-2 text-slate-800 dark:text-slate-100">
                             <MessageSquareText size={18} className="text-red-600" />
                             <h3 className="font-bold transition-colors">Alguma observação?</h3>
                         </div>
                         <textarea
-                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm outline-none focus:ring-4 focus:ring-red-500/10 dark:text-slate-100 transition-all min-h-[100px] resize-none placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm outline-none focus:ring-4 focus:ring-red-500/10 dark:text-slate-100 transition-all min-h-[100px] resize-none placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-inner"
                             placeholder="Ex: Tirar cebola, maionese à parte, ponto da carne..."
                             value={observation}
                             onChange={(e) => setObservation(e.target.value)}
@@ -136,7 +160,7 @@ export default function OptionsModal({ product, initialItem, onClose, onSave }: 
 
                 <div className="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 space-y-4 transition-colors">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 transition-colors">
+                        <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 transition-colors shadow-sm">
                             <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-1 hover:text-red-600 transition-colors dark:text-slate-400"><Minus size={18}/></button>
                             <span className="font-black text-slate-800 dark:text-slate-100 min-w-[20px] text-center transition-colors">{quantity}</span>
                             <button onClick={() => setQuantity(q => q + 1)} className="p-1 hover:text-red-600 transition-colors dark:text-slate-400"><Plus size={18}/></button>
@@ -149,7 +173,7 @@ export default function OptionsModal({ product, initialItem, onClose, onSave }: 
                     <button
                         disabled={!isValid}
                         onClick={() => onSave(product, selectedOptions, quantity, unitPrice, observation)}
-                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest transition-all ${isValid ? 'bg-red-600 text-white shadow-xl shadow-red-100' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'}`}
+                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest transition-all ${isValid ? 'bg-red-600 text-white shadow-xl shadow-red-100 hover:bg-red-700 active:scale-[0.98]' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'}`}
                     >
                         {initialItem ? 'Atualizar Item' : 'Adicionar ao Pedido'}
                     </button>

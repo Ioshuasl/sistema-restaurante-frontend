@@ -9,6 +9,7 @@ export const createCategoriaProduto = async (payload: CreateCategoriaProdutoPayl
 
 export const getAllCategoriasProdutos = async (): Promise<CategoriaProduto[]> => {
   const response = await api.get('/categoriaProduto');
+  console.log(response.data);
   return response.data;
 };
 

@@ -16,6 +16,12 @@ export interface Config {
   telefone: string;
   email: string;
   taxaEntrega: number;
+  menuLayout: 'modern' | 'compact' | 'minimalist';
+  primaryColor: string;
+  fontFamily: 'sans' | 'serif' | 'mono' | 'poppins';
+  borderRadius: '0px' | '8px' | '16px' | '9999px';
+  showBanner: boolean;
+  bannerImage?: string;
   createdAt: string;
   updatedAt: string;
   evolutionInstanceName: string;
@@ -39,6 +45,12 @@ export interface UpdateConfigPayload {
   telefone?: string;
   email?: string;
   taxaEntrega?: number;
+  menuLayout?: 'modern' | 'compact' | 'minimalist';
+  primaryColor?: string;
+  fontFamily?: 'sans' | 'serif' | 'mono' | 'poppins';
+  borderRadius?: '0px' | '8px' | '16px' | '9999px';
+  showBanner?: boolean;
+  bannerImage?: string;
   evolutionInstanceName?: string;
   urlAgenteImpressao?: string;
   nomeImpressora?: string;
