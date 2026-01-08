@@ -301,20 +301,6 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                 )}
             </main>
 
-            {/* Informações da Loja Mobile */}
-            <div className="sm:hidden fixed bottom-20 left-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl flex items-center justify-between z-40">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 text-white rounded-lg flex items-center justify-center">
-                        <Info size={16} />
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-black dark:text-white uppercase">Taxa de Entrega</p>
-                        <p className="text-[10px] font-bold text-slate-500">Sob consulta no checkout</p>
-                    </div>
-                </div>
-                <ChevronRight size={20} className="text-slate-300" />
-            </div>
-
             <CartDrawer 
                 isOpen={isCartOpen} 
                 onClose={() => setIsCartOpen(false)} 
