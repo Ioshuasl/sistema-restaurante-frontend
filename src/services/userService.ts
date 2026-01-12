@@ -1,6 +1,6 @@
 
 import api from './api';
-import { type User, type LoginPayload, type AuthResponse, type CreateUserPayload, type UpdateUserPayload } from '../types';
+import { type User, type LoginPayload, type AuthResponse, type CreateUserPayload, type UpdateUserPayload } from '../types/interfaces-types';
 
 export const loginUser = async (payload: LoginPayload): Promise<AuthResponse> => {
   const response = await api.post('/login', payload);

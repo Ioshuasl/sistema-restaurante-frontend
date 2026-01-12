@@ -12,7 +12,7 @@ import {
     type ISubProdutoPedidoPayload, 
     type CartItem, 
     type SubProduto 
-} from "../../../types";
+} from "../../../types/interfaces-types";
 import { getConfig } from '../../../services/configService';
 import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
 import { createPedido } from '../../../services/pedidoService';

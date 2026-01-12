@@ -1,136 +1,190 @@
-import { useState } from 'react';
-// 1. Importar tipos e Toast
-import { type Produto, type SubProduto, type CartItem, type GrupoOpcao } from '../../../types/interfaces-types';
-import { toast } from 'react-toastify'; 
-// (Assumindo que o ToastContainer já está no Checkout.tsx)
 
-type OptionsModalProps = {
+import React, { useState, useMemo } from 'react';
+import { X, Plus, Minus, Check, MessageSquareText } from 'lucide-react';
+import { type Produto, type SubProduto, type CartItem } from '../../../types';
+
+interface OptionsModalProps {
     product: Produto;
-    initialItem?: CartItem; // Opcional: o item que estamos editando
+    initialItem?: CartItem;
     onClose: () => void;
-    onSave: (product: Produto, subProducts: SubProduto[], quantity: number) => void;
-};
+    onSave: (
+        product: Produto,
+        selectedSubProducts: SubProduto[],
+        quantity: number,
+        unitPriceWithSubProducts: number,
+        observation?: string
+    ) => void;
+}
 
 export default function OptionsModal({ product, initialItem, onClose, onSave }: OptionsModalProps) {
     const [quantity, setQuantity] = useState(initialItem?.quantity || 1);
-    const [selectedSubProducts, setSelectedSubProducts] = useState<SubProduto[]>(initialItem?.selectedSubProducts || []);
+    const [selectedOptions, setSelectedOptions] = useState<SubProduto[]>(initialItem?.selectedSubProducts || []);
+    const [observation, setObservation] = useState(initialItem?.observation || '');
 
-    // 2. LÓGICA DE SELEÇÃO ATUALIZADA
-    const handleSelectionChange = (opcao: SubProduto, grupo: GrupoOpcao) => {
-        setSelectedSubProducts((prevSelected) => {
-            const isRadio = grupo.maxEscolhas === 1;
-            const isSelected = prevSelected.some(sp => sp.id === opcao.id);
-            
-            const otherGroupOptions = prevSelected.filter(sp => sp.grupoOpcao_id !== grupo.id);
-            const currentGroupOptions = prevSelected.filter(sp => sp.grupoOpcao_id === grupo.id);
+    const groups = useMemo(() => {
+        const rawGroups = product.gruposOpcoes || [];
+        return rawGroups.map((g: any) => ({
+            id: g.id,
+            nomeGrupo: g.nomeGrupo,
+            minEscolhas: g.minEscolhas || 0,
+            maxEscolhas: g.maxEscolhas || 1,
+            opcoes: g.opcoes || []
+        }));
+    }, [product]);
 
-            if (isRadio) {
-                // Lógica de Rádio: substitui
-                return [...otherGroupOptions, opcao];
-            } else {
-                // Lógica de Checkbox
-                if (isSelected) {
-                    // Remove
-                    return [...otherGroupOptions, ...currentGroupOptions.filter(sp => sp.id !== opcao.id)];
-                } else {
-                    // Adiciona, se houver espaço
-                    if (currentGroupOptions.length < grupo.maxEscolhas) {
-                        return [...prevSelected, opcao];
-                    } else {
-                        toast.warn(`Você só pode escolher até ${grupo.maxEscolhas} opções do grupo "${grupo.nomeGrupo}".`);
-                        return prevSelected; // Retorna o estado anterior (não adiciona)
-                    }
-                }
+    const handleToggleOption = (group: any, item: any) => {
+        const subProduct: SubProduto = {
+            id: item.id,
+            nome: item.nomeSubProduto,
+            valorAdicional: Number(item.valorAdicional || 0),
+            grupoOpcao_id: group.id
+        };
+
+        const isSelected = selectedOptions.some(opt => opt.id === item.id);
+        const countInGroup = selectedOptions.filter(opt => opt.grupoOpcao_id === group.id).length;
+
+        if (isSelected) {
+            setSelectedOptions(prev => prev.filter(opt => opt.id !== item.id));
+        } else {
+            if (countInGroup < group.maxEscolhas) {
+                setSelectedOptions(prev => [...prev, subProduct]);
+            } else if (group.maxEscolhas === 1) {
+                setSelectedOptions(prev => [
+                    ...prev.filter(opt => opt.grupoOpcao_id !== group.id),
+                    subProduct
+                ]);
             }
-        });
-    };
-
-    const subProductsTotal = selectedSubProducts.reduce((total, sp) => total + Number(sp.valorAdicional), 0);
-    const totalItemPrice = (Number(product.valorProduto) + subProductsTotal) * quantity;
-
-    // 3. LÓGICA DE CONFIRMAÇÃO ATUALIZADA (com validação)
-    const handleConfirm = () => {
-        // Validar 'minEscolhas' antes de salvar
-        let isValid = true;
-        product.gruposOpcoes?.forEach(grupo => {
-            const selectedCount = selectedSubProducts.filter(sp => sp.grupoOpcao_id === grupo.id).length;
-            if (selectedCount < grupo.minEscolhas) {
-                isValid = false;
-                toast.error(`Escolha pelo menos ${grupo.minEscolhas} opção(ões) do grupo "${grupo.nomeGrupo}".`);
-            }
-        });
-
-        if (isValid) {
-            onSave(product, selectedSubProducts, quantity);
-            onClose();
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                    <h2 className="text-2xl font-bold text-gray-800">{product.nomeProduto}</h2>
-                    <button onClick={onClose} className="text-2xl text-gray-500 hover:text-gray-800">&times;</button>
-                </div>
-                
-                <p className="text-gray-600">Ajuste os ingredientes e a quantidade como desejar.</p>
+    const optionsTotal = selectedOptions.reduce((acc, opt) => acc + Number(opt.valorAdicional), 0);
+    const unitPrice = Number(product.valorProduto) + optionsTotal;
 
-                {/* --- 4. JSX ATUALIZADO PARA GRUPOS --- */}
-                <div className="max-h-60 overflow-y-auto space-y-4 pr-2">
-                    {product.gruposOpcoes?.map(grupo => (
-                        <div key={grupo.id} className="border rounded-lg p-3">
-                            <h3 className="font-bold text-gray-700">{grupo.nomeGrupo}</h3>
-                            <p className="text-sm text-gray-500 mb-2">
-                                (Escolha {grupo.minEscolhas === grupo.maxEscolhas 
-                                    ? `exatamente ${grupo.minEscolhas}` 
-                                    : `de ${grupo.minEscolhas} até ${grupo.maxEscolhas}`
-                                } {grupo.maxEscolhas === 1 ? 'opção' : 'opções'})
-                            </p>
-                            
-                            <div className='space-y-2'>
-                                {grupo.opcoes?.map(opcao => (
-                                    <label key={opcao.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 cursor-pointer">
-                                        <div>
-                                            <p className="font-semibold">{opcao.nomeSubProduto}</p>
-                                            {Number(opcao.valorAdicional) > 0 && (
-                                                <p className="text-sm text-red-600">
-                                                    + R$ {Number(opcao.valorAdicional).toFixed(2)}
-                                                </p>
+    const isValid = groups.every(group => {
+        const count = selectedOptions.filter(opt => opt.grupoOpcao_id === group.id).length;
+        return count >= group.minEscolhas && count <= group.maxEscolhas;
+    });
+
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col transition-colors duration-300">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between transition-colors">
+                    <div>
+                        <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 transition-colors">Personalizar Pedido</h2>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{product.nomeProduto}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-white dark:bg-slate-900 custom-scrollbar transition-colors">
+                    
+                    {/* Header do Produto: Imagem e Descrição */}
+                    <div className="space-y-4">
+                        {product.image && (
+                            <div className="w-full aspect-[16/9] rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+                                <img 
+                                    src={product.image} 
+                                    alt={product.nomeProduto} 
+                                    className="w-full h-full object-cover" 
+                                />
+                            </div>
+                        )}
+                        <div className="px-2">
+                            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100">{product.nomeProduto}</h3>
+                            {product.descricao && (
+                                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed italic">
+                                    {product.descricao}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-slate-100 dark:bg-slate-800 mx-2" />
+
+                    {groups.length > 0 && groups.map(group => (
+                        <div key={group.id} className="space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                                <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-100 transition-colors">{group.nomeGrupo}</h3>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest transition-colors">
+                                        Escolha {group.minEscolhas === group.maxEscolhas ? group.minEscolhas : `${group.minEscolhas} a ${group.maxEscolhas}`}
+                                    </p>
+                                </div>
+                                {selectedOptions.filter(o => o.grupoOpcao_id === group.id).length >= group.minEscolhas && (
+                                    <span className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-black px-2 py-1 rounded-lg transition-colors">OK</span>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                {group.opcoes.map((item: any) => {
+                                    const isSelected = selectedOptions.some(opt => opt.id === item.id);
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => handleToggleOption(group, item)}
+                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${isSelected ? 'bg-[var(--primary-color-light)] border-[var(--primary-color)]/30' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent hover:border-slate-200 dark:hover:border-slate-700'}`}
+                                        >
+                                            <div className="text-left">
+                                                <p className={`text-sm font-bold transition-colors ${isSelected ? 'text-[var(--primary-color)]' : 'text-slate-700 dark:text-slate-200'}`}>{item.nomeSubProduto}</p>
+                                                {Number(item.valorAdicional) > 0 && <p className="text-xs text-slate-400 font-bold transition-colors">+ R$ {Number(item.valorAdicional).toFixed(2).replace('.', ',')}</p>}
+                                            </div>
+                                            {isSelected ? (
+                                                <div 
+                                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white"
+                                                    style={{ backgroundColor: 'var(--primary-color)' }}
+                                                >
+                                                    <Check size={14} />
+                                                </div>
+                                            ) : (
+                                                <Plus size={18} className="text-slate-300 transition-colors" />
                                             )}
-                                        </div>
-                                        <input
-                                            type={grupo.maxEscolhas === 1 ? 'radio' : 'checkbox'}
-                                            name={grupo.id.toString()} // Agrupa os radio buttons
-                                            // 'defaultChecked' não funciona bem com estado, usamos 'checked'
-                                            checked={selectedSubProducts.some(sp => sp.id === opcao.id)}
-                                            onChange={() => handleSelectionChange(opcao, grupo)}
-                                            className="h-5 w-5 rounded text-red-600 focus:ring-red-500 border-gray-300"
-                                        />
-                                    </label>
-                                ))}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}
-                </div>
-                {/* --- Fim da Iteração de Grupos --- */}
 
-
-                <div className="flex items-center justify-between mt-4">
-                    <p className="font-semibold text-lg">Quantidade:</p>
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="text-xl bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">-</button>
-                        <span className="text-xl font-bold">{quantity}</span>
-                        <button onClick={() => setQuantity(q => q + 1)} className="text-xl bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">+</button>
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-center gap-2 px-2 text-slate-800 dark:text-slate-100">
+                            <MessageSquareText size={18} style={{ color: 'var(--primary-color)' }} />
+                            <h3 className="font-bold transition-colors">Alguma observação?</h3>
+                        </div>
+                        <textarea
+                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm outline-none focus:ring-4 focus:ring-[var(--primary-color)]/10 dark:text-slate-100 transition-all min-h-[100px] resize-none placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-inner"
+                            placeholder="Ex: Tirar cebola, maionese à parte, ponto da carne..."
+                            value={observation}
+                            onChange={(e) => setObservation(e.target.value)}
+                        />
                     </div>
                 </div>
 
-                <button
-                    onClick={handleConfirm}
-                    className="w-full bg-red-600 text-white font-bold py-3 rounded-lg mt-4 hover:bg-red-700 transition"
-                >
-                    {initialItem ? 'Atualizar Item' : 'Adicionar ao Carrinho'} - R$ {totalItemPrice.toFixed(2)}
-                </button>
+                <div className="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 space-y-4 transition-colors">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 transition-colors shadow-sm">
+                            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-1 hover:text-[var(--primary-color)] transition-colors dark:text-slate-400"><Minus size={18}/></button>
+                            <span className="font-black text-slate-800 dark:text-slate-100 min-w-[20px] text-center transition-colors">{quantity}</span>
+                            <button onClick={() => setQuantity(q => q + 1)} className="p-1 hover:text-[var(--primary-color)] transition-colors dark:text-slate-400"><Plus size={18}/></button>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs font-bold text-slate-400 uppercase transition-colors">Subtotal</p>
+                            <p className="text-2xl font-black transition-colors" style={{ color: 'var(--primary-color)' }}>R$ {(unitPrice * quantity).toFixed(2).replace('.', ',')}</p>
+                        </div>
+                    </div>
+                    <button
+                        disabled={!isValid}
+                        onClick={() => onSave(product, selectedOptions, quantity, unitPrice, observation)}
+                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest transition-all ${isValid ? 'text-white shadow-xl hover:opacity-90 active:scale-[0.98]' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'}`}
+                        style={{ 
+                            backgroundColor: isValid ? 'var(--primary-color)' : '',
+                            borderRadius: 'var(--app-border-radius, 1rem)'
+                        }}
+                    >
+                        {initialItem ? 'Atualizar Item' : 'Adicionar ao Pedido'}
+                    </button>
+                </div>
             </div>
         </div>
     );

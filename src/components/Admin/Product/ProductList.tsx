@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Edit2, Trash2, Image as ImageIcon, ToggleLeft, ToggleRight } from 'lucide-react';
-import { type Produto } from '../../../types';
+import { type Produto } from '../../../types/interfaces-types';
 
 interface ProductListProps {
   produtos: Produto[];
@@ -21,8 +21,8 @@ const ProductList: React.FC<ProductListProps> = ({ produtos, onEdit, onDelete, o
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
+    <div className="w-full overflow-x-auto custom-scrollbar">
+      <table className="w-full text-left border-collapse min-w-[700px]">
         <thead>
           <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors">
             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Produto</th>
@@ -36,28 +36,28 @@ const ProductList: React.FC<ProductListProps> = ({ produtos, onEdit, onDelete, o
             <tr key={produto.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
               <td className="px-6 py-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
                     <img 
                         src={produto.image || `https://picsum.photos/seed/${produto.id}/100`} 
                         className="w-full h-full object-cover" 
                         alt={produto.nomeProduto} 
                     />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{produto.nomeProduto}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase transition-colors">ID: {produto.id}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{produto.nomeProduto}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase">ID: {produto.id}</p>
                   </div>
                 </div>
               </td>
               <td className="px-6 py-4 text-center">
-                <span className="text-sm font-black text-slate-900 dark:text-slate-100 transition-colors">
+                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
                   R$ {Number(produto.valorProduto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </td>
               <td className="px-6 py-4">
                 <div className="flex justify-center">
                   <button 
-                    onClick={() => onToggleAtivo(produto.id)}
+                    onClick={(e) => { e.stopPropagation(); onToggleAtivo(produto.id); }}
                     className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all border ${
                         produto.isAtivo 
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-500 dark:border-emerald-800' 
@@ -71,14 +71,14 @@ const ProductList: React.FC<ProductListProps> = ({ produtos, onEdit, onDelete, o
               <td className="px-6 py-4">
                 <div className="flex items-center justify-end gap-2">
                   <button 
-                    onClick={() => onEdit(produto)}
-                    className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all"
+                    onClick={(e) => { e.stopPropagation(); onEdit(produto); }}
+                    className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all"
                   >
                     <Edit2 size={16} />
                   </button>
                   <button 
-                    onClick={() => onDelete(produto)}
-                    className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl transition-all"
+                    onClick={(e) => { e.stopPropagation(); onDelete(produto); }}
+                    className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl transition-all"
                   >
                     <Trash2 size={16} />
                   </button>

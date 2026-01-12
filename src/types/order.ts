@@ -1,5 +1,5 @@
 
-import type { FormaPagamento } from './payment';
+import { type FormaPagamento } from './payment';
 
 export type situacaoPedido = 'preparando' | 'entrega' | 'finalizado' | 'cancelado';
 

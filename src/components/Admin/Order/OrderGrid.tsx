@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Clock, User, DollarSign, ChevronRight, Package, MapPin } from 'lucide-react';
-import { type Pedido } from '../../../types';
+import { type Pedido } from '../../../types/interfaces-types';
 
 interface OrderGridProps {
   pedidos: Pedido[];

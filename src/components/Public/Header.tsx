@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { CookingPot, Truck, Search, User, ShoppingBag, X, Sun, Moon } from 'lucide-react';
+import { CookingPot, Truck, Search, User, ShoppingBag, X, Sun, Moon, Clock } from 'lucide-react';
 
 interface HeaderProps {
     searchTerm: string;
@@ -10,10 +10,10 @@ interface HeaderProps {
     onOpenCart: () => void;
     isDarkMode: boolean;
     toggleTheme: () => void;
+    isOpen?: boolean;
 }
 
-export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCart, isDarkMode, toggleTheme }: HeaderProps) {
-    // Fix: Use 'react-router' instead of 'react-router-dom' to resolve missing export member error
+export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCart, isDarkMode, toggleTheme, isOpen = true }: HeaderProps) {
     const navigate = useNavigate();
 
     return (
@@ -25,21 +25,24 @@ export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCar
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 group cursor-pointer shrink-0"
                     >
-                        <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-200 dark:shadow-none group-hover:scale-110 transition">
+                        <div 
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition"
+                            style={{ backgroundColor: 'var(--primary-color, #dc2626)' }}
+                        >
                             <CookingPot size={24} />
                         </div>
                         <div className="hidden md:block">
                             <h1 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight transition-colors">GS SABORES</h1>
-                            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-bold transition-colors">
-                                <Truck size={12} />
-                                <span>ABERTO AGORA</span>
+                            <div className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${isOpen ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                {isOpen ? <Truck size={12} /> : <Clock size={12} />}
+                                <span>{isOpen ? 'ABERTO AGORA' : 'FECHADO'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Enhanced Search */}
                     <div className="flex-1 max-w-xl relative group">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-600 transition-colors">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--primary-color)] transition-colors">
                             <Search size={18} />
                         </div>
                         <input
@@ -47,7 +50,7 @@ export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCar
                             placeholder="Buscar no cardápio..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-transparent rounded-2xl py-2.5 pl-12 pr-10 text-sm font-medium dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700 focus:border-red-500/20 focus:ring-4 focus:ring-red-500/5 transition-all outline-none"
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-transparent rounded-2xl py-2.5 pl-12 pr-10 text-sm font-medium dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700 focus:border-[var(--primary-color)]/20 focus:ring-4 focus:ring-[var(--primary-color)]/5 transition-all outline-none"
                         />
                         {searchTerm && (
                             <button 
@@ -79,7 +82,8 @@ export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCar
                         
                         <button 
                             onClick={onOpenCart}
-                            className="relative p-2.5 bg-red-600 text-white rounded-xl shadow-lg shadow-red-200 dark:shadow-none hover:bg-red-700 transition active:scale-95"
+                            className="relative p-2.5 text-white rounded-xl shadow-lg transition active:scale-95"
+                            style={{ backgroundColor: 'var(--primary-color, #dc2626)' }}
                         >
                             <ShoppingBag size={20} />
                             {cartCount > 0 && (

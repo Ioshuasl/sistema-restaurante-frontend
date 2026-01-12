@@ -1,4 +1,11 @@
 
+export interface HorarioDia {
+  dia: number; // 0 (Domingo) a 6 (Sábado)
+  aberto: boolean;
+  inicio: string; // formato "HH:mm"
+  fim: string;    // formato "HH:mm"
+}
+
 export interface Config {
   id: number;
   cnpj: string;
@@ -27,6 +34,7 @@ export interface Config {
   evolutionInstanceName: string;
   urlAgenteImpressao: string;
   nomeImpressora: string;
+  horariosFuncionamento?: HorarioDia[];
 }
 
 export interface UpdateConfigPayload {
@@ -54,4 +62,5 @@ export interface UpdateConfigPayload {
   evolutionInstanceName?: string;
   urlAgenteImpressao?: string;
   nomeImpressora?: string;
+  horariosFuncionamento?: HorarioDia[];
 }

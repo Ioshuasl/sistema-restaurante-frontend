@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { X, ShoppingBag, Plus, Minus, ArrowRight } from 'lucide-react';
-import { type CartItem } from '../../types';
+import { X, ShoppingBag, Plus, Minus, ArrowRight, AlertCircle } from 'lucide-react';
+import { type CartItem } from '../../types/interfaces-types';
 
 interface CartDrawerProps {
     isOpen: boolean;
@@ -11,9 +11,10 @@ interface CartDrawerProps {
     onDecrement: (id: string) => void;
     total: number;
     onCheckout?: () => void;
+    isDisabled?: boolean;
 }
 
-export default function CartDrawer({ isOpen, onClose, cart, onIncrement, onDecrement, total, onCheckout }: CartDrawerProps) {
+export default function CartDrawer({ isOpen, onClose, cart, onIncrement, onDecrement, total, onCheckout, isDisabled = false }: CartDrawerProps) {
     if (!isOpen) return null;
 
     return (
@@ -24,7 +25,10 @@ export default function CartDrawer({ isOpen, onClose, cart, onIncrement, onDecre
                     <div className="h-full flex flex-col bg-white dark:bg-slate-900 shadow-2xl rounded-l-[2rem] overflow-hidden transition-colors border-l border-transparent dark:border-slate-800">
                         <div className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50 transition-colors">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg transition-colors">
+                                <div 
+                                    className="p-2 rounded-lg transition-colors"
+                                    style={{ backgroundColor: 'var(--primary-color-light, rgba(220, 38, 38, 0.1))', color: 'var(--primary-color, #dc2626)' }}
+                                >
                                     <ShoppingBag size={22} />
                                 </div>
                                 <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 transition-colors">Seu Pedido</h2>
@@ -39,7 +43,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onIncrement, onDecre
                                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-60">
                                     <ShoppingBag size={48} className="text-slate-400 dark:text-slate-600" />
                                     <p className="text-lg font-bold text-slate-800 dark:text-slate-200">Carrinho Vazio</p>
-                                    <button onClick={onClose} className="text-red-600 dark:text-red-400 font-bold text-sm">Voltar ao cardápio</button>
+                                    <button onClick={onClose} className="font-bold text-sm" style={{ color: 'var(--primary-color, #dc2626)' }}>Voltar ao cardápio</button>
                                 </div>
                             ) : (
                                 cart.map((item) => (
@@ -52,13 +56,14 @@ export default function CartDrawer({ isOpen, onClose, cart, onIncrement, onDecre
                                                     <p key={op.id} className="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase leading-none transition-colors">+ {op.nome}</p>
                                                 ))}
                                             </div>
-                                            {/* Fix: use unitPriceWithSubProducts instead of non-existent unitPriceWithOptions */}
-                                            <p className="mt-2 font-black text-red-600 dark:text-red-400 transition-colors">R$ {(item.unitPriceWithSubProducts * item.quantity).toFixed(2).replace('.', ',')}</p>
+                                            <p className="mt-2 font-black transition-colors" style={{ color: 'var(--primary-color, #dc2626)' }}>
+                                                R$ {(item.unitPriceWithSubProducts * item.quantity).toFixed(2).replace('.', ',')}
+                                            </p>
                                         </div>
                                         <div className="flex flex-col items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors">
-                                            <button onClick={() => onIncrement(item.cartItemId)} className="p-1 hover:text-red-600 dark:hover:text-red-400 transition dark:text-slate-400"><Plus size={14}/></button>
+                                            <button onClick={() => !isDisabled && onIncrement(item.cartItemId)} className="p-1 hover:text-[var(--primary-color)] transition dark:text-slate-400"><Plus size={14}/></button>
                                             <span className="text-xs font-bold px-2 py-0.5 border-y border-slate-100 dark:border-slate-700 dark:text-slate-200">{item.quantity}</span>
-                                            <button onClick={() => onDecrement(item.cartItemId)} className="p-1 hover:text-red-600 dark:hover:text-red-400 transition dark:text-slate-400"><Minus size={14}/></button>
+                                            <button onClick={() => !isDisabled && onDecrement(item.cartItemId)} className="p-1 hover:text-[var(--primary-color)] transition dark:text-slate-400"><Minus size={14}/></button>
                                         </div>
                                     </div>
                                 ))
@@ -66,18 +71,31 @@ export default function CartDrawer({ isOpen, onClose, cart, onIncrement, onDecre
                         </div>
 
                         <div className="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-4 transition-colors">
+                            {isDisabled && (
+                                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-start gap-3 mb-2 animate-pulse">
+                                    <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={16} />
+                                    <p className="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-tight">Estamos fechados no momento. Não é possível finalizar pedidos agora.</p>
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-center text-slate-900 dark:text-slate-100">
                                 <span className="text-lg font-extrabold transition-colors">Total</span>
-                                <span className="text-2xl font-black text-red-600 dark:text-red-400 transition-colors">R$ {total.toFixed(2).replace('.', ',')}</span>
+                                <span className="text-2xl font-black transition-colors" style={{ color: 'var(--primary-color, #dc2626)' }}>
+                                    R$ {total.toFixed(2).replace('.', ',')}
+                                </span>
                             </div>
                             <button
                                 onClick={onCheckout}
-                                disabled={cart.length === 0}
+                                disabled={cart.length === 0 || isDisabled}
                                 className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all
-                                    ${cart.length > 0 ? 'bg-red-600 text-white hover:bg-red-700 shadow-xl shadow-red-200 dark:shadow-none' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'}
+                                    ${cart.length > 0 && !isDisabled ? 'text-white shadow-xl' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'}
                                 `}
+                                style={{ 
+                                    backgroundColor: (cart.length > 0 && !isDisabled) ? 'var(--primary-color, #dc2626)' : '',
+                                    borderRadius: 'var(--app-border-radius, 1rem)'
+                                }}
                             >
-                                Ir para Checkout
+                                {isDisabled ? 'Loja Fechada' : 'Ir para Checkout'}
                                 <ArrowRight size={20} />
                             </button>
                         </div>
