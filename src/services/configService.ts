@@ -1,6 +1,6 @@
 
 import api from './api';
-import { type Config, type UpdateConfigPayload } from '../types';
+import { type Config, type UpdateConfigPayload } from '../types/interfaces-types';
 
 export const getConfig = async (): Promise<Config> => {
   const response = await api.get('/config');

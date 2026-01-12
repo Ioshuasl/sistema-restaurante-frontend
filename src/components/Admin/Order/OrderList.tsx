@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Clock, User, DollarSign, ExternalLink } from 'lucide-react';
-import { type Pedido, type FormaPagamento } from '../../../types';
+import { type Pedido, type FormaPagamento } from '../../../types/interfaces-types';
 import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
 
 interface OrderListProps {

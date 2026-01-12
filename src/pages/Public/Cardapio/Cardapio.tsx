@@ -5,8 +5,8 @@ import CartDrawer from '../../../components/Public/CartDrawer';
 import OptionsModal from '../../../components/Public/OptionsModal';
 import { getMenu } from '../../../services/menuService';
 import { getConfig } from '../../../services/configService';
-import { type Menu, type Produto, type CartItem, type SubProduto, type Config } from '../../../types/';
-import { Loader2, WifiOff, SearchX, Plus, ChevronRight, Info } from 'lucide-react';
+import { type Menu, type Produto, type CartItem, type SubProduto, type Config, type HorarioDia } from '../../../types/interfaces-types';
+import { Loader2, WifiOff, SearchX, Plus, ChevronRight, Info, Clock, AlertCircle } from 'lucide-react';
 
 interface CardapioProps {
     cart: CartItem[];
@@ -27,6 +27,32 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+
+    // Lógica de Estabelecimento Aberto
+    const isStoreOpen = useMemo(() => {
+        if (!config?.horariosFuncionamento || config.horariosFuncionamento.length === 0) return true;
+        
+        const agora = new Date();
+        const diaSemana = agora.getDay(); // 0-6
+        const horaMinuto = agora.getHours() * 60 + agora.getMinutes();
+        
+        const configHoje = config.horariosFuncionamento.find(h => h.dia === diaSemana);
+        
+        if (!configHoje || !configHoje.aberto) return false;
+        
+        const [hIni, mIni] = configHoje.inicio.split(':').map(Number);
+        const [hFim, mFim] = configHoje.fim.split(':').map(Number);
+        
+        const inicioMinutos = hIni * 60 + mIni;
+        const fimMinutos = hFim * 60 + mFim;
+
+        // Caso o horário de fechamento seja após a meia-noite (ex: 18:00 às 02:00)
+        if (fimMinutos < inicioMinutos) {
+            return horaMinuto >= inicioMinutos || horaMinuto <= fimMinutos;
+        }
+        
+        return horaMinuto >= inicioMinutos && horaMinuto <= fimMinutos;
+    }, [config]);
 
     const fetchData = async () => {
         try {
@@ -56,11 +82,10 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
         fetchData();
     }, []);
 
-    // Scroll Suave para Categorias
     const scrollToCategory = (id: number) => {
         const element = document.getElementById(`cat-${id}`);
         if (element) {
-            const offset = 140; // Compensação para o header fixo
+            const offset = 140;
             const bodyRect = document.body.getBoundingClientRect().top;
             const elementRect = element.getBoundingClientRect().top;
             const elementPosition = elementRect - bodyRect;
@@ -94,6 +119,8 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
         unitPriceWithSubProducts: number,
         observation?: string
     ) => {
+        if (!isStoreOpen) return;
+
         setCart(prev => {
             const subProductIds = selectedSubProducts.map(op => op.id).sort().join('-');
             const cartItemId = `${product.id}-${subProductIds}-${observation || ''}`;
@@ -117,7 +144,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
         });
         setIsCartOpen(true);
         setIsOptionsModalOpen(false);
-    }, [setCart]);
+    }, [setCart, isStoreOpen]);
 
     const updateQuantity = (cartItemId: string, delta: number) => {
         setCart(prev => 
@@ -130,6 +157,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
     };
 
     const handleProductClick = (product: Produto) => {
+        if (!isStoreOpen) return;
         const hasOptions = (product.gruposOpcoes && product.gruposOpcoes.length > 0);
         if (hasOptions) {
             setSelectedProduct(product);
@@ -147,7 +175,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                 <div 
                     key={product.id} 
                     onClick={() => handleProductClick(product)}
-                    className={`group bg-white dark:bg-slate-900 p-3 shadow-sm hover:shadow-md transition-all flex items-center gap-3 cursor-pointer border border-slate-100 dark:border-slate-800 ${borderRadiusClass}`}
+                    className={`group bg-white dark:bg-slate-900 p-3 shadow-sm hover:shadow-md transition-all flex items-center gap-3 cursor-pointer border border-slate-100 dark:border-slate-800 ${borderRadiusClass} ${!isStoreOpen ? 'grayscale' : ''}`}
                 >
                     <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0">
                         <img src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200'} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt={product.nomeProduto} />
@@ -157,9 +185,11 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-1">{product.descricao}</p>
                         <span className="text-sm font-black text-[var(--primary-color)]">R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}</span>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-[var(--primary-color)] group-hover:text-white transition-all">
-                        <Plus size={16} />
-                    </div>
+                    {isStoreOpen && (
+                        <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-[var(--primary-color)] group-hover:text-white transition-all">
+                            <Plus size={16} />
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -169,7 +199,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                 <div 
                     key={product.id} 
                     onClick={() => handleProductClick(product)}
-                    className="group py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 px-2 -mx-2 rounded-xl transition-all"
+                    className={`group py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-start justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 px-2 -mx-2 rounded-xl transition-all ${!isStoreOpen ? 'opacity-50' : ''}`}
                 >
                     <div className="flex-1">
                         <div className="flex items-baseline justify-between gap-2">
@@ -184,7 +214,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
         }
 
         return (
-            <div key={product.id} className={`group bg-white dark:bg-slate-900 p-4 shadow-sm hover:shadow-xl transition-all flex flex-col border border-slate-100 dark:border-slate-800 ${borderRadiusClass}`}>
+            <div key={product.id} className={`group bg-white dark:bg-slate-900 p-4 shadow-sm hover:shadow-xl transition-all flex flex-col border border-slate-100 dark:border-slate-800 ${borderRadiusClass} ${!isStoreOpen ? 'grayscale' : ''}`}>
                 <div className="relative mb-4 overflow-hidden aspect-[5/4] rounded-2xl">
                     <img src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt={product.nomeProduto} />
                 </div>
@@ -194,12 +224,14 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
                     <span className="text-xl font-black text-slate-900 dark:text-slate-100">R$ {Number(product.valorProduto).toFixed(2).replace('.', ',')}</span>
-                    <button 
-                        onClick={() => handleProductClick(product)} 
-                        className="w-10 h-10 bg-slate-100 dark:bg-slate-800 hover:bg-[var(--primary-color)] text-slate-900 dark:text-slate-100 hover:text-white rounded-xl flex items-center justify-center transition-all"
-                    >
-                        <Plus size={20} />
-                    </button>
+                    {isStoreOpen && (
+                        <button 
+                            onClick={() => handleProductClick(product)} 
+                            className="w-10 h-10 bg-slate-100 dark:bg-slate-800 hover:bg-[var(--primary-color)] text-slate-900 dark:text-slate-100 hover:text-white rounded-xl flex items-center justify-center transition-all"
+                        >
+                            <Plus size={20} />
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -222,7 +254,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
     const dynamicStyles = { 
         fontFamily: config?.fontFamily === 'serif' ? 'serif' : config?.fontFamily === 'mono' ? 'monospace' : config?.fontFamily === 'poppins' ? 'Poppins, sans-serif' : 'Inter, sans-serif',
         '--primary-color': config?.primaryColor || '#dc2626',
-        '--primary-color-light': `${config?.primaryColor || '#dc2626'}1a`, // Adiciona 10% de opacidade para tons pastéis
+        '--primary-color-light': `${config?.primaryColor || '#dc2626'}1a`,
         '--app-border-radius': config?.borderRadius || '1rem'
     } as React.CSSProperties;
 
@@ -234,6 +266,12 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                     <WifiOff size={14} /> Modo Offline - Dados locais sendo exibidos
                 </div>
             )}
+
+            {!isStoreOpen && (
+                <div className="bg-rose-600 text-white text-[10px] font-black uppercase tracking-[0.2em] py-2 text-center flex items-center justify-center gap-2 sticky top-0 z-[60] shadow-lg">
+                    <AlertCircle size={14} /> Estamos fechados no momento. Volte em breve para fazer seu pedido!
+                </div>
+            )}
             
             <Header 
                 searchTerm={searchTerm} 
@@ -242,9 +280,9 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                 onOpenCart={() => setIsCartOpen(true)}
                 isDarkMode={isDarkMode}
                 toggleTheme={toggleTheme}
+                isOpen={isStoreOpen}
             />
 
-            {/* Navegação de Categorias Sticky */}
             <nav className="sticky top-16 sm:top-20 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 overflow-x-auto hide-scrollbar">
                 <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex gap-4">
                     {menuData.map(cat => (
@@ -309,6 +347,7 @@ export default function Cardapio({ cart, setCart, isDarkMode, toggleTheme, onChe
                 onDecrement={(id) => updateQuantity(id, -1)} 
                 total={cartTotal} 
                 onCheckout={onCheckout} 
+                isDisabled={!isStoreOpen}
             />
             
             {isOptionsModalOpen && selectedProduct && (

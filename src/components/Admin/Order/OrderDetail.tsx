@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { updatePedido, printPedido, updateTempoEspera } from '../../../services/pedidoService';
 import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
-import { type Pedido, type FormaPagamento } from '../../../types';
+import { type Pedido, type FormaPagamento } from '../../../types/interfaces-types';
 import { toast } from 'react-toastify';
 
 interface OrderDetailProps {

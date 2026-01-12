@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { CookingPot, Truck, Search, User, ShoppingBag, X, Sun, Moon } from 'lucide-react';
+import { CookingPot, Truck, Search, User, ShoppingBag, X, Sun, Moon, Clock } from 'lucide-react';
 
 interface HeaderProps {
     searchTerm: string;
@@ -10,9 +10,10 @@ interface HeaderProps {
     onOpenCart: () => void;
     isDarkMode: boolean;
     toggleTheme: () => void;
+    isOpen?: boolean;
 }
 
-export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCart, isDarkMode, toggleTheme }: HeaderProps) {
+export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCart, isDarkMode, toggleTheme, isOpen = true }: HeaderProps) {
     const navigate = useNavigate();
 
     return (
@@ -32,9 +33,9 @@ export default function Header({ searchTerm, setSearchTerm, cartCount, onOpenCar
                         </div>
                         <div className="hidden md:block">
                             <h1 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight transition-colors">GS SABORES</h1>
-                            <div className="flex items-center gap-1.5 text-xs font-bold transition-colors" style={{ color: 'var(--primary-color, #16a34a)' }}>
-                                <Truck size={12} />
-                                <span>ABERTO AGORA</span>
+                            <div className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${isOpen ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                {isOpen ? <Truck size={12} /> : <Clock size={12} />}
+                                <span>{isOpen ? 'ABERTO AGORA' : 'FECHADO'}</span>
                             </div>
                         </div>
                     </div>

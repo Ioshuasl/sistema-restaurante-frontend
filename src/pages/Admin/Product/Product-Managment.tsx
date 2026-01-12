@@ -3,17 +3,15 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Plus, 
   Search, 
-  RefreshCw, 
-  ShoppingBag,
-  Bell
+  RefreshCw
 } from 'lucide-react';
-import { useNavigate } from 'react-router';
 import Sidebar from '../../../components/Admin/Sidebar';
+import AdminHeader from '../../../components/Admin/AdminHeader';
 import ProductList from '../../../components/Admin/Product/ProductList';
 import ProductForm from '../../../components/Admin/Product/ProductForm';
 import ConfirmationModal from '../../../components/Common/ConfirmationModal';
 import { getAllProdutos, deleteProduto, toggleProdutoAtivo } from '../../../services/produtoService';
-import { type Produto } from '../../../types';
+import { type Produto } from '../../../types/interfaces-types';
 import { toast } from 'react-toastify';
 
 interface Props {
@@ -29,14 +27,12 @@ const ProductManagment: React.FC<Props> = ({ isDarkMode, toggleTheme }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Estados para o Modal de Confirmação
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Produto | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [hasUnread, setHasUnread] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const checkUnread = () => {
@@ -68,15 +64,14 @@ const ProductManagment: React.FC<Props> = ({ isDarkMode, toggleTheme }) => {
 
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
-    
     setIsDeleting(true);
     try { 
       await deleteProduto(productToDelete.id); 
-      toast.success(`Produto "${productToDelete.nomeProduto}" removido!`); 
+      toast.success(`Produto removido!`); 
       setIsDeleteModalOpen(false);
       fetchProducts(); 
     } catch (error) { 
-      toast.error("Falha ao excluir o produto."); 
+      toast.error("Falha ao excluir."); 
     } finally {
       setIsDeleting(false);
       setProductToDelete(null);
@@ -96,57 +91,41 @@ const ProductManagment: React.FC<Props> = ({ isDarkMode, toggleTheme }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
-      <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+      <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-20 flex items-center justify-between px-8 shrink-0 transition-colors">
-          <h1 className="text-xl font-black dark:text-slate-100 tracking-tight transition-colors">Gestão de Cardápio</h1>
+        <AdminHeader 
+          title="Gestão de Estoque" 
+          onMenuClick={() => setIsMobileMenuOpen(true)} 
+          hasUnreadNotifications={hasUnread}
+        />
 
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={() => navigate('/admin/order')}
-              className="relative text-slate-500 dark:text-slate-400 hover:text-orange-500 transition-colors"
-            >
-              <Bell className="h-6 w-6" />
-              {hasUnread && <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>}
-            </button>
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
-            <div className="flex items-center gap-3">
-               <div className="text-right">
-                <p className="text-sm font-bold dark:text-slate-100">Admin GS</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Painel de Controle</p>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold shadow-lg shadow-orange-500/20">AD</div>
-            </div>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
               <div className="relative flex-1 max-w-lg">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                     type="text" 
-                    placeholder="Pesquisar produto pelo nome..." 
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 outline-none dark:text-slate-100 focus:ring-4 focus:ring-orange-500/10 transition-all shadow-sm" 
+                    placeholder="Buscar produto pelo nome..." 
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 pl-12 pr-4 outline-none dark:text-slate-100 shadow-sm transition-all focus:ring-4 focus:ring-orange-500/10" 
                     value={searchTerm} 
                     onChange={e => setSearchTerm(e.target.value)} 
                 />
               </div>
               <button 
                 onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} 
-                className="bg-orange-500 text-white px-6 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-orange-600 transition-all shadow-xl shadow-orange-100 dark:shadow-none active:scale-95"
+                className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-orange-600 transition-all active:scale-95 shadow-lg shadow-orange-500/20"
               >
-                <Plus size={20} /> Novo Produto
+                <Plus size={20} /> Adicionar Produto
               </button>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden min-h-[400px] transition-colors">
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-x-auto min-h-[400px] transition-colors">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-32 gap-4">
                   <RefreshCw className="animate-spin text-orange-500" size={32} />
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando estoque...</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase">Carregando catálogo...</p>
                 </div>
               ) : (
                 <ProductList 
@@ -161,7 +140,6 @@ const ProductManagment: React.FC<Props> = ({ isDarkMode, toggleTheme }) => {
         </div>
       </main>
 
-      {/* Formulário de Produto */}
       {isFormOpen && (
         <ProductForm 
             product={editingProduct} 
@@ -170,17 +148,13 @@ const ProductManagment: React.FC<Props> = ({ isDarkMode, toggleTheme }) => {
         />
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
       <ConfirmationModal 
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
-        title="Excluir Produto?"
-        description={`Tem certeza que deseja remover "${productToDelete?.nomeProduto}" do seu cardápio? Esta ação não pode ser desfeita.`}
-        confirmText="Sim, Excluir"
-        cancelText="Manter Produto"
-        variant="danger"
+        title="Remover Produto?"
+        description="Esta ação ocultará o item permanentemente do cardápio público."
       />
     </div>
   );

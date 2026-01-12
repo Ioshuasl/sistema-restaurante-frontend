@@ -1,18 +1,27 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
-  Building2, Truck, MessageSquare, Printer, Loader2, CloudCheck, Palette
+  Building2, Truck, MessageSquare, Printer, Loader2, CloudCheck, Palette, Clock
 } from 'lucide-react';
 import Sidebar from "../../../components/Admin/Sidebar";
+import AdminHeader from "../../../components/Admin/AdminHeader";
 import { getConfig, updateConfig } from '../../../services/configService';
-
 import RestauranteTab from "../../../components/Admin/Config/RestauranteTab";
 import AparenciaTab from "../../../components/Admin/Config/AparenciaTab";
 import MobilePreview from "../../../components/Admin/Config/MobilePreview";
-import { IMaskInput } from "react-imask";
+import TaxasTab from "../../../components/Admin/Config/TaxasTab";
+import WhatsAppTab from "../../../components/Admin/Config/WhatsAppTab";
+import ImpressaoTab from "../../../components/Admin/Config/ImpressaoTab";
+import HorariosTab from "../../../components/Admin/Config/HorariosTab";
+import WhatsAppQrModal from "../../../components/Admin/Config/WhatsAppQrModal";
+import { connectInstance } from "../../../functions/instanceConnect";
+import { toast } from "react-toastify";
+import axios from "axios";
 
-type ActiveTab = 'restaurante' | 'taxas' | 'whatsapp' | 'impressao' | 'aparencia';
+type ActiveTab = 'restaurante' | 'taxas' | 'whatsapp' | 'impressao' | 'aparencia' | 'horarios';
 type SyncStatus = 'synced' | 'saving' | 'error' | 'idle';
+
+const UNREAD_ORDERS_KEY = 'gs-sabores-unread-orders';
 
 export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolean; toggleTheme: () => void }) {
     const [configData, setConfigData] = useState<any>(null);
@@ -20,6 +29,16 @@ export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolea
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
     const [lastSaved, setLastSaved] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<ActiveTab>('restaurante');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [hasUnread, setHasUnread] = useState(false);
+    
+    // States para Componentes Modulares
+    const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+    const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+    const [isConnectingWhatsapp, setIsConnectingWhatsapp] = useState(false);
+    const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
+    const [isSearchingPrinters, setIsSearchingPrinters] = useState(false);
+
     const isFirstLoad = useRef(true);
     const debounceTimer = useRef<number | null>(null);
 
@@ -34,10 +53,19 @@ export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolea
             await updateConfig({ ...configData, taxaEntrega: taxa || 0 });
             setSyncStatus('synced');
             setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        } catch (error) { setSyncStatus('error'); }
+        } catch (error) { 
+            setSyncStatus('error');
+            toast.error("Erro ao sincronizar ajustes.");
+        }
     }, [configData]);
 
     useEffect(() => {
+        const checkUnread = () => {
+          setHasUnread(localStorage.getItem(UNREAD_ORDERS_KEY) === 'true');
+        };
+        checkUnread();
+        window.addEventListener('storage-update', checkUnread);
+
         const fetchConfig = async () => {
             try {
                 const c = await getConfig();
@@ -46,9 +74,14 @@ export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolea
                     taxaEntrega: c.taxaEntrega?.toString().replace('.', ',') || "0,00"
                 });
                 setTimeout(() => { isFirstLoad.current = false; }, 1000);
-            } catch (error) { console.error(error); } finally { setIsLoading(false); }
+            } catch (error) { 
+                toast.error("Erro ao carregar configurações.");
+            } finally { 
+                setIsLoading(false); 
+            }
         };
         fetchConfig();
+        return () => window.removeEventListener('storage-update', checkUnread);
     }, []);
 
     useEffect(() => {
@@ -62,72 +95,184 @@ export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolea
         setConfigData((prev: any) => ({ ...prev, [field]: value }));
     };
 
+    const handleConnectWhatsapp = async () => {
+        if (!configData.evolutionInstanceName) {
+            toast.warning("Informe o nome da instância primeiro.");
+            return;
+        }
+        setIsConnectingWhatsapp(true);
+        setQrCodeBase64(null);
+        setIsQrModalOpen(true);
+        
+        try {
+            const connection = await connectInstance({
+                serverUrl: 'https://evo.iaxionautomacao.online',
+                instanceName: configData.evolutionInstanceName,
+                apikey: 'DF538DBF53F12D86A5DF763C54721'
+            });
+
+            if (connection?.base64) {
+                setQrCodeBase64(connection.base64);
+            } else {
+                setIsQrModalOpen(false);
+                toast.info("Instância já conectada ou conectada em outro aparelho.");
+            }
+        } catch (error) {
+            setIsQrModalOpen(false);
+            toast.error("Erro na comunicação com Evolution API");
+        } finally {
+            setIsConnectingWhatsapp(false);
+        }
+    };
+
+    const handleFetchPrinters = async () => {
+        if (!configData.urlAgenteImpressao) {
+            toast.warning("Informe a URL do agente de impressão.");
+            return;
+        }
+        setIsSearchingPrinters(true);
+        try {
+            // Adicionado header para ignorar a tela de aviso do ngrok
+            const response = await axios.get(`${configData.urlAgenteImpressao}/printers`, { 
+                timeout: 6000,
+                headers: {
+                    'ngrok-skip-browser-warning': 'true',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (Array.isArray(response.data)) {
+                // Extrai o atributo 'name' ou 'deviceId' de cada objeto retornado
+                const printerNames = response.data.map((p: any) => {
+                    if (typeof p === 'string') return p;
+                    return p.name || p.deviceId || "Impressora desconhecida";
+                });
+                
+                setAvailablePrinters(printerNames);
+                toast.success(`${printerNames.length} impressoras detectadas.`);
+            } else {
+                console.error("Formato de resposta inesperado:", response.data);
+                toast.error("Resposta do agente em formato inválido.");
+            }
+        } catch (error) {
+            console.error("Erro ao buscar impressoras:", error);
+            toast.error("Agente de impressão offline ou URL do ngrok expirada.");
+        } finally {
+            setIsSearchingPrinters(false);
+        }
+    };
+
     const inputClasses = "w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm outline-none focus:ring-4 focus:ring-orange-500/10 transition-all dark:text-slate-100 placeholder:text-slate-400";
     const labelClasses = "block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1";
-    const tabClasses = (tab: ActiveTab) => `flex items-center gap-2 px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-4 ${activeTab === tab ? 'border-orange-500 text-orange-600 dark:text-orange-500' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`;
+    
+    const tabClasses = (tab: ActiveTab) => `flex items-center gap-2 px-6 py-4 text-sm font-black uppercase tracking-widest transition-all border-b-4 shrink-0 ${
+        activeTab === tab 
+        ? 'border-orange-500 text-orange-600 dark:text-orange-500' 
+        : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+    }`;
 
-    if (isLoading || !configData) return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" size={40} /></div>;
+    if (isLoading || !configData) {
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center gap-4 transition-colors">
+                <Loader2 className="animate-spin text-orange-500" size={40} />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizando Ajustes</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
-            <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-            <main className="flex-1 flex flex-col h-screen overflow-hidden">
-                <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-20 flex items-center justify-between px-8 shrink-0">
-                    <h1 className="text-xl font-black dark:text-slate-100 tracking-tight">Painel de Configurações</h1>
-                    <div className="flex items-center gap-2">
-                       {syncStatus === 'saving' ? <Loader2 size={12} className="animate-spin text-orange-500" /> : <CloudCheck size={16} className="text-emerald-500" />}
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{syncStatus === 'saving' ? 'Salvando...' : `Salvo ${lastSaved || ''}`}</span>
-                    </div>
-                </header>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors">
+            <Sidebar 
+                isDarkMode={isDarkMode} 
+                toggleTheme={toggleTheme} 
+                isOpen={isMobileMenuOpen} 
+                onClose={() => setIsMobileMenuOpen(false)} 
+            />
 
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <main className="flex-1 flex flex-col h-screen overflow-hidden">
+                <AdminHeader 
+                  title="Configurações do Sistema" 
+                  onMenuClick={() => setIsMobileMenuOpen(true)} 
+                  hasUnreadNotifications={hasUnread}
+                />
+
+                <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
                   <div className="max-w-6xl mx-auto">
-                      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                          <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 overflow-x-auto hide-scrollbar">
+                      <div className="flex items-center justify-between mb-4 bg-white dark:bg-slate-900 px-6 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+                         <div className="flex items-center gap-2">
+                           {syncStatus === 'saving' ? <Loader2 size={14} className="animate-spin text-orange-500" /> : <CloudCheck size={16} className="text-emerald-500" />}
+                           <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                               {syncStatus === 'saving' ? 'Salvando Alterações...' : `Configurações salvas às ${lastSaved || '--:--'}`}
+                           </span>
+                         </div>
+                         <div className="text-[9px] font-black uppercase text-slate-400">Ambiente de Produção</div>
+                      </div>
+
+                      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                          <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/20 overflow-x-auto hide-scrollbar">
                               <button onClick={() => setActiveTab('restaurante')} className={tabClasses('restaurante')}><Building2 size={18} /> Empresa</button>
-                              <button onClick={() => setActiveTab('aparencia')} className={tabClasses('aparencia')}><Palette size={18} /> Aparência</button>
-                              <button onClick={() => setActiveTab('taxas')} className={tabClasses('taxas')}><Truck size={18} /> Taxas</button>
-                              <button onClick={() => setActiveTab('whatsapp')} className={tabClasses('whatsapp')}><MessageSquare size={18} /> WhatsApp</button>
-                              <button onClick={() => setActiveTab('impressao')} className={tabClasses('impressao')}><Printer size={18} /> Impressão</button>
+                              <button onClick={() => setActiveTab('aparencia')} className={tabClasses('aparencia')}><Palette size={18} /> Design</button>
+                              <button onClick={() => setActiveTab('taxas')} className={tabClasses('taxas')}><Truck size={18} /> Logística</button>
+                              <button onClick={() => setActiveTab('horarios')} className={tabClasses('horarios')}><Clock size={18} /> Horários</button>
+                              <button onClick={() => setActiveTab('whatsapp')} className={tabClasses('whatsapp')}><MessageSquare size={18} /> Mensageria</button>
+                              <button onClick={() => setActiveTab('impressao')} className={tabClasses('impressao')}><Printer size={18} /> PDV</button>
                           </div>
 
-                          <div className="p-10">
-                              {activeTab === 'restaurante' && <RestauranteTab data={configData} onChange={handleChange} inputClasses={inputClasses} labelClasses={labelClasses} />}
+                          <div className="p-6 sm:p-10 min-h-[500px]">
+                              {activeTab === 'restaurante' && (
+                                  <RestauranteTab data={configData} onChange={handleChange} inputClasses={inputClasses} labelClasses={labelClasses} />
+                              )}
                               
                               {activeTab === 'aparencia' && (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
                                   <AparenciaTab data={configData} onChange={handleChange} inputClasses={inputClasses} />
-                                  <MobilePreview data={configData} />
+                                  <div className="xl:col-span-5 hidden sm:flex justify-center">
+                                    <MobilePreview data={configData} />
+                                  </div>
                                 </div>
                               )}
 
                               {activeTab === 'taxas' && (
-                                <div className="max-w-md space-y-6">
-                                  <h3 className={labelClasses}>Taxa de Entrega</h3>
-                                  <IMaskInput mask={Number} scale={2} radix="," thousandsSeparator="." padFractionalZeros={true} className={inputClasses} value={configData.taxaEntrega} onAccept={(v) => handleChange('taxaEntrega', v)} />
-                                </div>
+                                  <TaxasTab data={configData} onChange={handleChange} inputClasses={inputClasses} labelClasses={labelClasses} />
+                              )}
+
+                              {activeTab === 'horarios' && (
+                                  <HorariosTab data={configData} onChange={handleChange} labelClasses={labelClasses} />
                               )}
 
                               {activeTab === 'whatsapp' && (
-                                <div className="max-w-md space-y-6">
-                                  <h3 className={labelClasses}>Instância Evolution API</h3>
-                                  <input className={inputClasses} value={configData.evolutionInstanceName} onChange={e => handleChange('evolutionInstanceName', e.target.value)} />
-                                </div>
+                                  <WhatsAppTab 
+                                      data={configData} 
+                                      onChange={handleChange} 
+                                      onConnect={handleConnectWhatsapp} 
+                                      isConnecting={isConnectingWhatsapp} 
+                                      inputClasses={inputClasses} 
+                                      labelClasses={labelClasses} 
+                                  />
                               )}
 
                               {activeTab === 'impressao' && (
-                                <div className="max-w-md space-y-6">
-                                  <h3 className={labelClasses}>URL Agente de Impressão</h3>
-                                  <input className={inputClasses} value={configData.urlAgenteImpressao} onChange={e => handleChange('urlAgenteImpressao', e.target.value)} />
-                                  <h3 className={labelClasses}>Nome da Impressora</h3>
-                                  <input className={inputClasses} value={configData.nomeImpressora} onChange={e => handleChange('nomeImpressora', e.target.value)} />
-                                </div>
+                                  <ImpressaoTab 
+                                      data={configData} 
+                                      onChange={handleChange} 
+                                      onFetchPrinters={handleFetchPrinters} 
+                                      isSearching={isSearchingPrinters} 
+                                      availablePrinters={availablePrinters} 
+                                      inputClasses={inputClasses} 
+                                      labelClasses={labelClasses} 
+                                  />
                               )}
                           </div>
                       </div>
                   </div>
                 </div>
             </main>
+
+            <WhatsAppQrModal 
+                isOpen={isQrModalOpen} 
+                onClose={() => setIsQrModalOpen(false)} 
+                qrCodeBase64={qrCodeBase64} 
+            />
         </div>
     );
 }

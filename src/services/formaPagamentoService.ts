@@ -1,6 +1,6 @@
 
 import api from './api';
-import { type FormaPagamento, type CreateFormaPagamentoPayload, type UpdateFormaPagamentoPayload } from '../types';
+import { type FormaPagamento, type CreateFormaPagamentoPayload, type UpdateFormaPagamentoPayload } from '../types/interfaces-types';
 
 export const createFormaPagamento = async (payload: CreateFormaPagamentoPayload): Promise<FormaPagamento> => {
   const response = await api.post('/formaPagamento', payload);

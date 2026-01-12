@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { X, Plus, Minus, Check, MessageSquareText } from 'lucide-react';
-import { type Produto, type SubProduto, type CartItem } from '../../types/';
+import { type Produto, type SubProduto, type CartItem } from '../../types/interfaces-types';
 
 interface OptionsModalProps {
     product: Produto;

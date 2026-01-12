@@ -1,6 +1,6 @@
 
 import api from './api';
-import { type SubProduto, type CreateSubProdutoPayload, type UpdateSubProdutoPayload } from '../types';
+import { type SubProduto, type CreateSubProdutoPayload, type UpdateSubProdutoPayload } from '../types/interfaces-types';
 
 export const createSubProduto = async (payload: CreateSubProdutoPayload): Promise<SubProduto> => {
   const response = await api.post('/subproduto', payload);
