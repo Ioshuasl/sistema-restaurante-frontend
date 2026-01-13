@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, ArrowLeft, CheckCircle2, Loader2, MapPin, User as UserIcon, CreditCard, AlertTriangle, MessageSquareMore } from 'lucide-react';
 import { IMaskInput } from 'react-imask';
@@ -61,6 +60,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
     const totalProdutos = cart.reduce((acc, item) => acc + item.unitPriceWithSubProducts * item.quantity, 0);
     const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + Number(taxaEntrega);
 
+    // 1. Alteração: Leitura do LocalStorage (removido payment e observacaoGeral)
     useEffect(() => {
         const savedData = localStorage.getItem(USER_DATA_KEY);
         if (savedData) {
@@ -76,21 +76,22 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                 setEstado(data.estado || '');
                 setComplemento(data.complemento || '');
                 setRetiradaLocal(!!data.retiradaLocal);
-                if (data.payment) setPayment(Number(data.payment));
-                if (data.observacaoGeral) setObservacaoGeral(data.observacaoGeral);
+                // Não carregamos mais payment nem observacaoGeral daqui
             } catch (e) {
                 console.error("Erro ao carregar dados do usuário", e);
             }
         }
     }, []);
 
+    // 2. Alteração: Escrita no LocalStorage (removido payment e observacaoGeral)
     useEffect(() => {
         const data = { 
             name, telefone, cep, logradouro, numero, bairro, cidade, estado, 
-            complemento, retiradaLocal, payment, observacaoGeral 
+            complemento, retiradaLocal 
+            // payment e observacaoGeral foram removidos do objeto salvo
         };
         localStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
-    }, [name, telefone, cep, logradouro, numero, bairro, cidade, estado, complemento, retiradaLocal, payment, observacaoGeral]);
+    }, [name, telefone, cep, logradouro, numero, bairro, cidade, estado, complemento, retiradaLocal]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -125,6 +126,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
             setBairro(data.bairro || "");
             setCidade(data.localidade || "");
             setEstado(data.uf || "");
+            setNumero("00");
         } catch (e) {
             toast.error("Erro ao buscar CEP");
         }
@@ -151,15 +153,69 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
         return { valid: true };
     };
 
+    // 3. Alteração: Função de validação robusta
+    const validateForm = () => {
+        // Validação de Nome (pelo menos 2 palavras para nome + sobrenome é uma boa prática, mas aqui validaremos se não está vazio e tem pelo menos 3 chars)
+        if (!name.trim() || name.trim().length < 3) {
+            toast.warning('Por favor, informe seu nome completo.');
+            return false;
+        }
+
+        // Validação de Telefone (verifica apenas números, deve ter 10 ou 11 dígitos para DDD + número)
+        const cleanPhone = telefone.replace(/\D/g, '');
+        if (cleanPhone.length < 10) {
+            toast.warning('Por favor, informe um telefone válido com DDD (WhatsApp).');
+            return false;
+        }
+
+        // Validações de Endereço (apenas se for entrega)
+        if (!retiradaLocal) {
+            const cleanCep = cep.replace(/\D/g, '');
+            if (cleanCep.length !== 8) {
+                toast.warning('Informe um CEP válido.');
+                return false;
+            }
+            if (!logradouro.trim()) {
+                toast.warning('Informe o nome da rua/logradouro.');
+                return false;
+            }
+            if (!bairro.trim()) {
+                toast.warning('Informe o bairro.');
+                return false;
+            }
+            if (!numero.trim()) {
+                toast.warning('Informe o número do endereço.');
+                return false;
+            }
+            if (!cidade.trim()) {
+                toast.warning('Informe a cidade.');
+                return false;
+            }
+            if (!estado.trim()) {
+                toast.warning('Informe o estado (UF).');
+                return false;
+            }
+        }
+
+        // Validação de Pagamento
+        if (!payment) {
+            toast.warning('Selecione uma forma de pagamento.');
+            return false;
+        }
+
+        return true;
+    };
+
     const handleSubmit = async () => {
-        if (!name || !telefone || (!retiradaLocal && (!cep || !logradouro || !bairro || !numero || !cidade || !estado)) || !payment) {
-            toast.error('Por favor, preencha todos os campos obrigatórios do formulário.');
+        // Validação dos inputs do formulário
+        if (!validateForm()) {
             return;
         }
 
-        const validation = validateCartItems();
-        if (!validation.valid) {
-            toast.warning(validation.message, { 
+        // Validação das regras de negócio do carrinho (opcionais obrigatórios)
+        const cartValidation = validateCartItems();
+        if (!cartValidation.valid) {
+            toast.warning(cartValidation.message, { 
                 icon: <AlertTriangle className="text-amber-500" />,
                 autoClose: 5000
             });
@@ -178,7 +234,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                     produtoId: item.product.id,
                     quantidade: item.quantity,
                     subProdutos: subProdutos,
-                    observacaoItem: item.observation // Backend espera 'observacaoItem' no item do payload
+                    observacaoItem: item.observation
                 };
             });
 
@@ -199,7 +255,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                 bairroCliente: retiradaLocal ? "" : bairro,
                 cidadeCliente: retiradaLocal ? "" : cidade,
                 estadoCliente: retiradaLocal ? "" : estado,
-                observacao: observacaoGeral // Observação geral do pedido
+                observacao: observacaoGeral
             };
 
             await createPedido(orderPayload);
@@ -207,7 +263,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
             onConfirm();
         } catch (error) {
             console.error('Erro ao enviar pedido:', error);
-            toast.error('Ocorreu um erro ao processar seu pedido.');
+            toast.error('Ocorreu um erro ao processar seu pedido. Tente novamente.');
         } finally {
             setIsSubmitting(false);
         }
