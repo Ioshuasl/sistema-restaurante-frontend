@@ -60,7 +60,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
     const totalProdutos = cart.reduce((acc, item) => acc + item.unitPriceWithSubProducts * item.quantity, 0);
     const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + Number(taxaEntrega);
 
-    // 1. Alteração: Leitura do LocalStorage (removido payment e observacaoGeral)
+    // Carregar dados (sem pagamento e observação)
     useEffect(() => {
         const savedData = localStorage.getItem(USER_DATA_KEY);
         if (savedData) {
@@ -76,19 +76,17 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                 setEstado(data.estado || '');
                 setComplemento(data.complemento || '');
                 setRetiradaLocal(!!data.retiradaLocal);
-                // Não carregamos mais payment nem observacaoGeral daqui
             } catch (e) {
                 console.error("Erro ao carregar dados do usuário", e);
             }
         }
     }, []);
 
-    // 2. Alteração: Escrita no LocalStorage (removido payment e observacaoGeral)
+    // Salvar dados (sem pagamento e observação)
     useEffect(() => {
         const data = { 
             name, telefone, cep, logradouro, numero, bairro, cidade, estado, 
             complemento, retiradaLocal 
-            // payment e observacaoGeral foram removidos do objeto salvo
         };
         localStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
     }, [name, telefone, cep, logradouro, numero, bairro, cidade, estado, complemento, retiradaLocal]);
@@ -126,7 +124,6 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
             setBairro(data.bairro || "");
             setCidade(data.localidade || "");
             setEstado(data.uf || "");
-            setNumero("00");
         } catch (e) {
             toast.error("Erro ao buscar CEP");
         }
@@ -153,22 +150,18 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
         return { valid: true };
     };
 
-    // 3. Alteração: Função de validação robusta
     const validateForm = () => {
-        // Validação de Nome (pelo menos 2 palavras para nome + sobrenome é uma boa prática, mas aqui validaremos se não está vazio e tem pelo menos 3 chars)
         if (!name.trim() || name.trim().length < 3) {
             toast.warning('Por favor, informe seu nome completo.');
             return false;
         }
 
-        // Validação de Telefone (verifica apenas números, deve ter 10 ou 11 dígitos para DDD + número)
         const cleanPhone = telefone.replace(/\D/g, '');
         if (cleanPhone.length < 10) {
             toast.warning('Por favor, informe um telefone válido com DDD (WhatsApp).');
             return false;
         }
 
-        // Validações de Endereço (apenas se for entrega)
         if (!retiradaLocal) {
             const cleanCep = cep.replace(/\D/g, '');
             if (cleanCep.length !== 8) {
@@ -197,7 +190,6 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
             }
         }
 
-        // Validação de Pagamento
         if (!payment) {
             toast.warning('Selecione uma forma de pagamento.');
             return false;
@@ -207,12 +199,8 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
     };
 
     const handleSubmit = async () => {
-        // Validação dos inputs do formulário
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
-        // Validação das regras de negócio do carrinho (opcionais obrigatórios)
         const cartValidation = validateCartItems();
         if (!cartValidation.valid) {
             toast.warning(cartValidation.message, { 
@@ -263,7 +251,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
             onConfirm();
         } catch (error) {
             console.error('Erro ao enviar pedido:', error);
-            toast.error('Ocorreu um erro ao processar seu pedido. Tente novamente.');
+            toast.error('Ocorreu um erro ao processar seu pedido.');
         } finally {
             setIsSubmitting(false);
         }
@@ -364,27 +352,34 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                                             <input type="text" className={inputClasses} value={numero} onChange={(e) => setNumero(e.target.value)} />
                                         </div>
                                     </div>
+                                    
+                                    {/* CORREÇÃO DO LAYOUT PARA MELHORAR VISIBILIDADE DA UF */}
                                     <div className="grid grid-cols-12 gap-4">
-                                        <div className="col-span-5">
+                                        {/* Bairro ocupa linha toda no mobile, 5 colunas no desktop */}
+                                        <div className="col-span-12 sm:col-span-5">
                                             <label className={labelClasses}>Bairro *</label>
                                             <input type="text" className={inputClasses} value={bairro} onChange={(e) => setBairro(e.target.value)} />
                                         </div>
-                                        <div className="col-span-5">
+                                        {/* Cidade divide linha com UF no mobile */}
+                                        <div className="col-span-9 sm:col-span-5">
                                             <label className={labelClasses}>Cidade *</label>
                                             <input type="text" className={inputClasses} value={cidade} onChange={(e) => setCidade(e.target.value)} />
                                         </div>
-                                        <div className="col-span-2">
+                                        {/* UF ganha espaço e padding reduzido */}
+                                        <div className="col-span-3 sm:col-span-2">
                                             <label className={labelClasses}>UF *</label>
                                             <input 
                                                 type="text" 
                                                 maxLength={2}
                                                 placeholder="UF"
-                                                className={`${inputClasses} text-center uppercase`} 
+                                                // Substituímos o padding 'p-4' por 'px-1 py-4' para não cortar o texto
+                                                className={`${inputClasses.replace('p-4', 'px-1 py-4')} text-center uppercase`} 
                                                 value={estado} 
                                                 onChange={(e) => setEstado(e.target.value.toUpperCase().slice(0, 2))} 
                                             />
                                         </div>
                                     </div>
+
                                     <input type="text" placeholder="Complemento / Referência" className={inputClasses} value={complemento} onChange={(e) => setComplemento(e.target.value)} />
                                 </div>
                             ) : (
