@@ -14,6 +14,7 @@ export const printPedido = async (id: number) => {
 
 export const getAllPedidos = async (): Promise<Pedido[]> => {
   const response = await api.get('/pedido');
+  console.log(response.data);
   return response.data.rows;
 };
 

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   X, 
@@ -6,7 +5,6 @@ import {
   MapPin, 
   Phone, 
   CreditCard, 
-  Clock, 
   CheckCircle,
   Truck,
   XCircle,
@@ -18,7 +16,9 @@ import {
   MessageSquareText,
   Timer,
   Save,
-  Zap
+  Zap,
+  Store, // Novo ícone para Retirada
+  Bike   // Novo ícone para Delivery
 } from 'lucide-react';
 import { updatePedido, printPedido, updateTempoEspera } from '../../../services/pedidoService';
 import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
@@ -100,11 +100,16 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
         {/* Header */}
         <div className="bg-white dark:bg-slate-900 px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm z-10 transition-colors">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-100 dark:shadow-none transition-colors">
-              <ClipboardList size={24} />
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-colors ${pedido.isRetiradaEstabelecimento ? 'bg-orange-500 shadow-orange-100' : 'bg-red-600 shadow-red-100'}`}>
+              {pedido.isRetiradaEstabelecimento ? <Store size={24} /> : <Bike size={24} />}
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight transition-colors">Pedido #{pedido.id}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight transition-colors">Pedido #{pedido.id}</h2>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${pedido.isRetiradaEstabelecimento ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                    {pedido.isRetiradaEstabelecimento ? 'Retirada' : 'Delivery'}
+                </span>
+              </div>
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] transition-colors">
                 {new Date(pedido.createdAt).toLocaleString('pt-BR')}
               </p>
@@ -128,7 +133,61 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
           
-          {/* Info Cards */}
+          {/* LÓGICA DE EXIBIÇÃO: RETIRADA VS DELIVERY */}
+          {pedido.isRetiradaEstabelecimento ? (
+             // CARD DE RETIRADA
+             <div className="bg-orange-50 dark:bg-orange-900/10 p-6 rounded-3xl border-2 border-dashed border-orange-200 dark:border-orange-900/30 flex items-center gap-4 transition-colors">
+                <div className="bg-white dark:bg-orange-900/20 p-3 rounded-full">
+                    <Store className="text-orange-500" size={24} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Retirada no Balcão</h3>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">O cliente irá buscar o pedido no estabelecimento.</p>
+                </div>
+             </div>
+          ) : (
+            // CARD DE ENDEREÇO (DELIVERY)
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <MapPin size={100} />
+              </div>
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="flex items-center gap-2 text-rose-500 transition-colors">
+                  <MapPin size={16} />
+                  <h3 className="text-xs font-black uppercase tracking-widest">Endereço de Entrega</h3>
+                </div>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${pedido.logadouroCliente}, ${pedido.numeroCliente} - ${pedido.bairroCliente}, ${pedido.cidadeCliente}`)}`}
+                  target="_blank" rel="noreferrer"
+                  className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase flex items-center gap-1 transition-colors hover:underline"
+                >
+                  Abrir Maps <ExternalLink size={10} />
+                </a>
+              </div>
+              <div className="text-sm font-medium bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 transition-colors relative z-10">
+                <p className="font-black text-slate-900 dark:text-slate-100 text-lg transition-colors">
+                    {pedido.logadouroCliente}, Nº {pedido.numeroCliente}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {pedido.quadraCliente && (
+                        <span className="px-2 py-1 bg-white dark:bg-slate-700 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                            Quadra: {pedido.quadraCliente}
+                        </span>
+                    )}
+                    {pedido.loteCliente && (
+                        <span className="px-2 py-1 bg-white dark:bg-slate-700 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                            Lote: {pedido.loteCliente}
+                        </span>
+                    )}
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 transition-colors uppercase text-xs font-bold tracking-wide">
+                    {pedido.bairroCliente} • {pedido.cidadeCliente}/{pedido.estadoCliente}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Info Cards (Cliente e Pagamento) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
               <div className="flex items-center gap-2 text-orange-500 mb-4 transition-colors">
@@ -153,14 +212,21 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{formaPagamentoNome}</p>
-                <p className="text-sm font-black text-orange-600 dark:text-orange-500 mt-1 transition-colors">
-                  R$ {Number(pedido.valorTotalPedido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+                <div className="flex items-end justify-between mt-1">
+                    <p className="text-lg font-black text-emerald-600 dark:text-emerald-500 transition-colors">
+                    R$ {Number(pedido.valorTotalPedido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    {!pedido.isRetiradaEstabelecimento && pedido.taxaEntrega && Number(pedido.taxaEntrega) > 0 && (
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">
+                            (Inclui Taxa: R$ {Number(pedido.taxaEntrega).toFixed(2)})
+                        </span>
+                    )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Tempo de Espera - Prático */}
+          {/* Tempo de Espera */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2 text-indigo-500 transition-colors">
@@ -174,7 +240,6 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
             </div>
             
             <div className="space-y-4">
-              {/* Sugestões de Tempo Único */}
               <div className="flex flex-wrap gap-2">
                 {quickTimes.map(time => (
                   <button
@@ -187,7 +252,6 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
                 ))}
               </div>
 
-              {/* Sugestões de Intervalos */}
               <div className="flex flex-wrap gap-2">
                 {quickRanges.map(range => (
                   <button
@@ -240,30 +304,6 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200 italic transition-colors">
                 "{pedido.observacao}"
               </p>
-            </div>
-          )}
-
-          {/* Endereço */}
-          {!pedido.isRetiradaEstabelecimento && (
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-rose-500 transition-colors">
-                  <MapPin size={16} />
-                  <h3 className="text-xs font-black uppercase tracking-widest">Endereço de Entrega</h3>
-                </div>
-                <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${pedido.logadouroCliente}, ${pedido.numeroCliente}, ${pedido.bairroCliente}`)}`}
-                  target="_blank" rel="noreferrer"
-                  className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase flex items-center gap-1 transition-colors"
-                >
-                  Abrir Maps <ExternalLink size={10} />
-                </a>
-              </div>
-              <div className="text-sm font-medium bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 transition-colors">
-                <p className="font-black text-slate-900 dark:text-slate-100 transition-colors">{pedido.logadouroCliente}, {pedido.numeroCliente}</p>
-                <p className="text-slate-500 dark:text-slate-400 transition-colors">{pedido.bairroCliente} - {pedido.cidadeCliente}/{pedido.estadoCliente}</p>
-                {pedido.quadraCliente && <p className="text-xs text-slate-400 dark:text-slate-600 mt-1 italic transition-colors">Complemento: {pedido.quadraCliente}</p>}
-              </div>
             </div>
           )}
 
@@ -331,7 +371,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
                 disabled={updating}
                 className="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 dark:shadow-none flex items-center justify-center gap-3 transition-all"
               >
-                {updating ? <Loader2 className="animate-spin" /> : <><Truck size={20} /> Saiu para Entrega</>}
+                {updating ? <Loader2 className="animate-spin" /> : <><Truck size={20} /> {pedido.isRetiradaEstabelecimento ? 'Pronto para Retirada' : 'Saiu para Entrega'}</>}
               </button>
             )}
 

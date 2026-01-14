@@ -40,6 +40,7 @@ export interface UpdatePedidoPayload {
 }
 
 export interface Pedido {
+  taxaEntrega: boolean;
   id: number;
   formaPagamento_id: number;
   isRetiradaEstabelecimento: boolean;

@@ -35,7 +35,7 @@ type Props = {
     isDarkMode: boolean;
 };
 
-const USER_DATA_KEY = 'gs-sabores-user-data-v2';
+const USER_DATA_KEY = 'gs-sabores-user-data-v3'; // Atualizei a versão da key para limpar cache antigo
 
 export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrease, onUpdateItem, isDarkMode }: Props) {
     const [name, setName] = useState('');
@@ -46,7 +46,11 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
     const [bairro, setBairro] = useState('');
     const [cidade, setCidade] = useState('');
     const [estado, setEstado] = useState('');
-    const [complemento, setComplemento] = useState('');
+    
+    // NOVOS ESTADOS
+    const [quadra, setQuadra] = useState('');
+    const [lote, setLote] = useState('');
+    
     const [observacaoGeral, setObservacaoGeral] = useState('');
     
     const [retiradaLocal, setRetiradaLocal] = useState(false);
@@ -60,7 +64,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
     const totalProdutos = cart.reduce((acc, item) => acc + item.unitPriceWithSubProducts * item.quantity, 0);
     const valorTotal = retiradaLocal ? totalProdutos : totalProdutos + Number(taxaEntrega);
 
-    // Carregar dados (sem pagamento e observação)
+    // Carregar dados
     useEffect(() => {
         const savedData = localStorage.getItem(USER_DATA_KEY);
         if (savedData) {
@@ -74,22 +78,25 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                 setBairro(data.bairro || '');
                 setCidade(data.cidade || '');
                 setEstado(data.estado || '');
-                setComplemento(data.complemento || '');
                 setRetiradaLocal(!!data.retiradaLocal);
+                
+                // Carregar Quadra e Lote
+                setQuadra(data.quadra || '');
+                setLote(data.lote || '');
             } catch (e) {
                 console.error("Erro ao carregar dados do usuário", e);
             }
         }
     }, []);
 
-    // Salvar dados (sem pagamento e observação)
+    // Salvar dados
     useEffect(() => {
         const data = { 
             name, telefone, cep, logradouro, numero, bairro, cidade, estado, 
-            complemento, retiradaLocal 
+            quadra, lote, retiradaLocal // Salvando Quadra e Lote
         };
         localStorage.setItem(USER_DATA_KEY, JSON.stringify(data));
-    }, [name, telefone, cep, logradouro, numero, bairro, cidade, estado, complemento, retiradaLocal]);
+    }, [name, telefone, cep, logradouro, numero, bairro, cidade, estado, quadra, lote, retiradaLocal]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -121,6 +128,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                 return;
             }
             setLogradouro(data.logradouro || "");
+            setNumero('00')
             setBairro(data.bairro || "");
             setCidade(data.localidade || "");
             setEstado(data.uf || "");
@@ -178,6 +186,15 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
             }
             if (!numero.trim()) {
                 toast.warning('Informe o número do endereço.');
+                return false;
+            }
+            // Validação de Quadra e Lote
+            if (!quadra.trim()) {
+                toast.warning('Informe a quadra.');
+                return false;
+            }
+            if (!lote.trim()) {
+                toast.warning('Informe o lote.');
                 return false;
             }
             if (!cidade.trim()) {
@@ -238,8 +255,9 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                 tipoLogadouroCliente: 'Não informado',
                 logadouroCliente: retiradaLocal ? "" : logradouro,
                 numeroCliente: retiradaLocal ? "" : numero,
-                quadraCliente: retiradaLocal ? "" : (complemento || "N/A"),
-                loteCliente: retiradaLocal ? "" : (complemento || "N/A"),
+                // Mapeamento CORRETO para o Backend
+                quadraCliente: retiradaLocal ? "" : quadra,
+                loteCliente: retiradaLocal ? "" : lote,
                 bairroCliente: retiradaLocal ? "" : bairro,
                 cidadeCliente: retiradaLocal ? "" : cidade,
                 estadoCliente: retiradaLocal ? "" : estado,
@@ -353,26 +371,21 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                                         </div>
                                     </div>
                                     
-                                    {/* CORREÇÃO DO LAYOUT PARA MELHORAR VISIBILIDADE DA UF */}
                                     <div className="grid grid-cols-12 gap-4">
-                                        {/* Bairro ocupa linha toda no mobile, 5 colunas no desktop */}
                                         <div className="col-span-12 sm:col-span-5">
                                             <label className={labelClasses}>Bairro *</label>
                                             <input type="text" className={inputClasses} value={bairro} onChange={(e) => setBairro(e.target.value)} />
                                         </div>
-                                        {/* Cidade divide linha com UF no mobile */}
                                         <div className="col-span-9 sm:col-span-5">
                                             <label className={labelClasses}>Cidade *</label>
                                             <input type="text" className={inputClasses} value={cidade} onChange={(e) => setCidade(e.target.value)} />
                                         </div>
-                                        {/* UF ganha espaço e padding reduzido */}
                                         <div className="col-span-3 sm:col-span-2">
                                             <label className={labelClasses}>UF *</label>
                                             <input 
                                                 type="text" 
                                                 maxLength={2}
                                                 placeholder="UF"
-                                                // Substituímos o padding 'p-4' por 'px-1 py-4' para não cortar o texto
                                                 className={`${inputClasses.replace('p-4', 'px-1 py-4')} text-center uppercase`} 
                                                 value={estado} 
                                                 onChange={(e) => setEstado(e.target.value.toUpperCase().slice(0, 2))} 
@@ -380,7 +393,29 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                                         </div>
                                     </div>
 
-                                    <input type="text" placeholder="Complemento / Referência" className={inputClasses} value={complemento} onChange={(e) => setComplemento(e.target.value)} />
+                                    {/* SUBSTITUIÇÃO DO COMPLEMENTO POR QUADRA E LOTE */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={labelClasses}>Quadra *</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Qd..." 
+                                                className={inputClasses} 
+                                                value={quadra} 
+                                                onChange={(e) => setQuadra(e.target.value)} 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClasses}>Lote *</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Lt..." 
+                                                className={inputClasses} 
+                                                value={lote} 
+                                                onChange={(e) => setLote(e.target.value)} 
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-3xl border border-red-100 dark:border-red-900/20 flex items-start gap-4 transition-colors">
@@ -390,6 +425,7 @@ export default function Checkout({ cart, onBack, onConfirm, onIncrease, onDecrea
                             )}
                         </div>
 
+                        {/* ... Restante do código (Pagamento, Resumo, etc) permanece igual ... */}
                         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
                             <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-8 flex items-center gap-3 transition-colors">
                                 <CreditCard className="text-red-600 dark:text-red-500" /> Pagamento
