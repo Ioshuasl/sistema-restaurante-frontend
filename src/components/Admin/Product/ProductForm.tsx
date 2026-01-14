@@ -11,7 +11,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Upload,
-  CloudUpload
+  CloudUpload,
+  GripVertical
 } from 'lucide-react';
 import { IMaskInput } from 'react-imask';
 import { 
@@ -63,6 +64,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'options'>('basic');
+
+  // Estados para Drag & Drop
+  const [draggedItem, setDraggedItem] = useState<{ gIndex: number; oIndex: number } | null>(null);
+  const [dragOverGroup, setDragOverGroup] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,6 +152,49 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
     setGrupos(newGrupos);
   };
 
+  // Funções de Drag and Drop
+  const handleDragStart = (gIndex: number, oIndex: number) => {
+    setDraggedItem({ gIndex, oIndex });
+  };
+
+  const handleDragOver = (e: React.DragEvent, gIndex: number) => {
+    e.preventDefault();
+    if (dragOverGroup !== gIndex) {
+      setDragOverGroup(gIndex);
+    }
+  };
+
+  const handleDrop = (targetGIndex: number) => {
+    if (!draggedItem) return;
+    const { gIndex: sourceGIndex, oIndex: sourceOIndex } = draggedItem;
+
+    // Se soltar no mesmo grupo, apenas reseta os estados de controle
+    if (sourceGIndex === targetGIndex) {
+      setDraggedItem(null);
+      setDragOverGroup(null);
+      return;
+    }
+
+    const newGrupos = [...grupos];
+    
+    // IMPORTANTE: Clonamos o item e REMOVEMOS o ID.
+    // Isso garante que o backend entenda que este item deve ser CRIADO no novo grupo,
+    // e o item original (que tinha o ID no grupo antigo) será removido por não estar mais na lista do grupo de origem.
+    const itemToMove = { ...newGrupos[sourceGIndex].opcoes[sourceOIndex] };
+    delete itemToMove.id; 
+
+    // Remove do grupo de origem
+    newGrupos[sourceGIndex].opcoes.splice(sourceOIndex, 1);
+    
+    // Adiciona ao grupo de destino
+    newGrupos[targetGIndex].opcoes.push(itemToMove);
+
+    setGrupos(newGrupos);
+    setDraggedItem(null);
+    setDragOverGroup(null);
+    toast.info(`Item movido para "${newGrupos[targetGIndex].nomeGrupo || 'o grupo'}"`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!image) { return toast.warning("A imagem é obrigatória!"); }
@@ -155,6 +203,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
 
     setSaving(true);
     const valorNumerico = parseFloat(preco.replace(/\./g, '').replace(',', '.'));
+    
+    // Sanitização final para garantir que grupos vazios ou sem nome não quebrem
+    const gruposLimpos = grupos.filter(g => g.nomeGrupo.trim() !== "");
+
     const payload: any = {
       nomeProduto: nome,
       valorProduto: valorNumerico,
@@ -162,7 +214,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
       descricao: descricao,
       isAtivo: isAtivo,
       categoriaProduto_id: Number(categoriaId),
-      gruposOpcoes: grupos
+      gruposOpcoes: gruposLimpos
     };
 
     try {
@@ -175,7 +227,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
       }
       onSuccess();
     } catch (error) {
-      toast.error("Erro ao salvar.");
+      toast.error("Erro ao salvar o produto.");
     } finally {
       setSaving(false);
     }
@@ -202,12 +254,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
 
           <div className="flex gap-4 sm:gap-8 overflow-x-auto hide-scrollbar">
             <button 
+              type="button"
               onClick={() => setActiveTab('basic')}
               className={`pb-4 px-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all border-b-4 whitespace-nowrap ${activeTab === 'basic' ? 'border-orange-500 text-orange-600 dark:text-orange-500' : 'border-transparent text-slate-400 dark:text-slate-600'}`}
             >
               <div className="flex items-center gap-2"><Settings2 size={14} /> Básico</div>
             </button>
             <button 
+              type="button"
               onClick={() => setActiveTab('options')}
               className={`pb-4 px-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all border-b-4 whitespace-nowrap ${activeTab === 'options' ? 'border-orange-500 text-orange-600 dark:text-orange-500' : 'border-transparent text-slate-400 dark:text-slate-600'}`}
             >
@@ -306,7 +360,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
               ) : (
                 <div className="space-y-8">
                   {grupos.map((grupo, gIndex) => (
-                    <div key={gIndex} className="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-6 border border-slate-100 dark:border-slate-700 relative group/card">
+                    <div 
+                      key={gIndex} 
+                      onDragOver={(e) => handleDragOver(e, gIndex)}
+                      onDrop={() => handleDrop(gIndex)}
+                      className={`bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-6 border-2 transition-all relative group/card ${
+                        dragOverGroup === gIndex 
+                        ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/10' 
+                        : 'border-slate-100 dark:border-slate-700'
+                      }`}
+                    >
                       <button type="button" onClick={() => removeGrupo(gIndex)} className="absolute -top-2 -right-2 w-8 h-8 bg-rose-500 text-white rounded-xl flex items-center justify-center shadow-lg hover:bg-rose-600 transition-all z-10"><Trash2 size={14} /></button>
 
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
@@ -326,24 +389,46 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose, onSuccess }
                         </div>
                       </div>
 
-                      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-3">
+                      <div className={`bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-3 transition-colors ${dragOverGroup === gIndex ? 'bg-orange-50/20' : ''}`}>
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Opções de Seleção</h4>
                           <button type="button" onClick={() => addOpcao(gIndex)} className="text-[9px] font-black text-blue-500 uppercase flex items-center gap-1 hover:underline"><Plus size={10} /> Adicionar Opção</button>
                         </div>
-                        {grupo.opcoes.map((opcao, oIndex) => (
-                          <div key={oIndex} className="flex flex-col sm:flex-row items-stretch gap-3 bg-slate-50 dark:bg-slate-800/30 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
-                            <input type="text" className="flex-1 bg-transparent border-none text-xs font-bold p-1 outline-none dark:text-slate-100" placeholder="Título da opção" value={opcao.nomeSubProduto} onChange={(e) => updateOpcao(gIndex, oIndex, 'nomeSubProduto', e.target.value)} />
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 shrink-0">
-                                  <span className="text-[9px] font-bold text-slate-300 mr-1">R$</span>
-                                  <input type="number" step="0.01" className="w-16 bg-transparent border-none text-[10px] font-black p-1 outline-none text-right dark:text-slate-100" value={opcao.valorAdicional} onChange={(e) => updateOpcao(gIndex, oIndex, 'valorAdicional', Number(e.target.value))} />
+                        {grupo.opcoes.map((opcao, oIndex) => {
+                          const isBeingDragged = draggedItem?.gIndex === gIndex && draggedItem?.oIndex === oIndex;
+                          
+                          return (
+                            <div 
+                              key={oIndex} 
+                              draggable="true"
+                              onDragStart={() => handleDragStart(gIndex, oIndex)}
+                              onDragEnd={() => { setDraggedItem(null); setDragOverGroup(null); }}
+                              className={`flex flex-col sm:flex-row items-stretch gap-3 bg-slate-50 dark:bg-slate-800/30 p-2 rounded-xl border border-slate-100 dark:border-slate-800 transition-all ${
+                                isBeingDragged ? 'opacity-20 scale-95 border-dashed' : 'hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-orange-500 transition-colors shrink-0">
+                                  <GripVertical size={16} />
                                 </div>
-                                <button type="button" onClick={() => updateOpcao(gIndex, oIndex, 'isAtivo', !opcao.isAtivo)} className={`p-2 rounded-lg transition-all ${opcao.isAtivo ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'text-slate-300'}`}>{opcao.isAtivo ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}</button>
-                                <button type="button" onClick={() => removeOpcao(gIndex, oIndex)} className="p-2 text-slate-200 hover:text-rose-500"><Trash2 size={14} /></button>
+                                <input type="text" className="flex-1 bg-transparent border-none text-xs font-bold p-1 outline-none dark:text-slate-100" placeholder="Título da opção" value={opcao.nomeSubProduto} onChange={(e) => updateOpcao(gIndex, oIndex, 'nomeSubProduto', e.target.value)} />
+                              </div>
+                              <div className="flex items-center gap-3">
+                                  <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 shrink-0">
+                                    <span className="text-[9px] font-bold text-slate-300 mr-1">R$</span>
+                                    <input type="number" step="0.01" className="w-16 bg-transparent border-none text-[10px] font-black p-1 outline-none text-right dark:text-slate-100" value={opcao.valorAdicional} onChange={(e) => updateOpcao(gIndex, oIndex, 'valorAdicional', Number(e.target.value))} />
+                                  </div>
+                                  <button type="button" onClick={() => updateOpcao(gIndex, oIndex, 'isAtivo', !opcao.isAtivo)} className={`p-2 rounded-lg transition-all ${opcao.isAtivo ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'text-slate-300'}`}>{opcao.isAtivo ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}</button>
+                                  <button type="button" onClick={() => removeOpcao(gIndex, oIndex)} className="p-2 text-slate-200 hover:text-rose-500"><Trash2 size={14} /></button>
+                              </div>
                             </div>
+                          );
+                        })}
+                        {grupo.opcoes.length === 0 && (
+                          <div className="py-4 text-center border border-dashed border-slate-100 dark:border-slate-800 rounded-xl">
+                            <p className="text-[8px] font-bold text-slate-300 uppercase">Arraste itens para cá ou adicione novos</p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   ))}
