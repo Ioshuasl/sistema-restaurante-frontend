@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { Clock, User, DollarSign, ExternalLink } from 'lucide-react';
+import { Clock, User, DollarSign, ExternalLink, Bike, Store } from 'lucide-react';
 import { type Pedido, type FormaPagamento } from '../../../types/interfaces-types';
 import { getAllFormasPagamento } from '../../../services/formaPagamentoService';
 
@@ -45,7 +44,7 @@ const OrderList: React.FC<OrderListProps> = ({ pedidos, onViewDetails }) => {
         <thead>
           <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 transition-colors">
             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">ID</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Cliente</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Cliente / Tipo</th>
             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Total</th>
             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Pagamento</th>
             <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Status</th>
@@ -65,12 +64,19 @@ const OrderList: React.FC<OrderListProps> = ({ pedidos, onViewDetails }) => {
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
-                    <User size={14} />
+                  {/* Ícone condicional: Bike para Delivery, Store para Retirada */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      pedido.isRetiradaEstabelecimento
+                      ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-500'
+                      : 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-500'
+                  }`}>
+                    {pedido.isRetiradaEstabelecimento ? <Store size={14} /> : <Bike size={14} />}
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{pedido.nomeCliente}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{pedido.telefoneCliente}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wide flex items-center gap-1">
+                        {pedido.isRetiradaEstabelecimento ? 'Retirada' : 'Delivery'} • {pedido.telefoneCliente}
+                    </p>
                   </div>
                 </div>
               </td>

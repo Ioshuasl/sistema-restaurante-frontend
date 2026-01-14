@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Clock, User, DollarSign, ChevronRight, Package, MapPin } from 'lucide-react';
+import { Clock, User, DollarSign, ChevronRight, Package, MapPin, Bike, Store } from 'lucide-react';
 import { type Pedido } from '../../../types/interfaces-types';
 
 interface OrderGridProps {
@@ -41,12 +40,30 @@ const OrderGrid: React.FC<OrderGridProps> = ({ pedidos, onViewDetails }) => {
 
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
-                <User size={18} />
+              {/* Avatar Diferenciado por Tipo */}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  pedido.isRetiradaEstabelecimento 
+                  ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-500' 
+                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+              }`}>
+                {pedido.isRetiradaEstabelecimento ? <Store size={18} /> : <User size={18} />}
               </div>
+              
               <div className="min-w-0">
                 <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate transition-colors">{pedido.nomeCliente}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-colors">{pedido.isRetiradaEstabelecimento ? 'Retirada' : 'Entrega'}</p>
+                
+                {/* Badge de Tipo de Pedido */}
+                <div className="flex items-center gap-1 mt-0.5">
+                    {pedido.isRetiradaEstabelecimento ? (
+                        <span className="text-[9px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-500 flex items-center gap-1">
+                            <Store size={10} /> Retirada
+                        </span>
+                    ) : (
+                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-500 flex items-center gap-1">
+                            <Bike size={10} /> Delivery
+                        </span>
+                    )}
+                </div>
               </div>
             </div>
 
@@ -55,10 +72,14 @@ const OrderGrid: React.FC<OrderGridProps> = ({ pedidos, onViewDetails }) => {
                   <Clock size={14} />
                   <span className="text-[10px] font-bold">{new Date(pedido.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                </div>
+               
+               {/* Só mostra endereço se NÃO for retirada */}
                {!pedido.isRetiradaEstabelecimento && (
                  <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 transition-colors">
                     <MapPin size={14} />
-                    <span className="text-[10px] font-bold truncate">{pedido.bairroCliente}</span>
+                    <span className="text-[10px] font-bold truncate">
+                        {pedido.bairroCliente}
+                    </span>
                  </div>
                )}
             </div>
