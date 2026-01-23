@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  X, 
-  Printer, 
-  MapPin, 
-  Phone, 
-  CreditCard, 
+import {
+  X,
+  Printer,
+  MapPin,
+  Phone,
+  CreditCard,
   CheckCircle,
   Truck,
   XCircle,
@@ -26,7 +26,7 @@ import { type Pedido, type FormaPagamento } from '../../../types/interfaces-type
 import { toast } from 'react-toastify';
 
 interface OrderDetailProps {
-  pedido: Pedido; 
+  pedido: Pedido;
   onClose: () => void;
   onStatusUpdate: () => void;
 }
@@ -41,7 +41,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
   const quickRanges = ["20 a 40 min", "30 a 50 min", "40 a 60 min", "50 a 70 min"];
 
   useEffect(() => {
-    getAllFormasPagamento().then(setFormasPagamento).catch(() => {});
+    getAllFormasPagamento().then(setFormasPagamento).catch(() => { });
   }, []);
 
   const handleStatusUpdate = async (newStatus: string) => {
@@ -94,9 +94,9 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-end">
       <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md" onClick={onClose} />
-      
+
       <div className="relative w-full max-w-2xl h-full bg-slate-50 dark:bg-slate-950 shadow-2xl flex flex-col animate-slide-in overflow-hidden transition-colors">
-        
+
         {/* Header */}
         <div className="bg-white dark:bg-slate-900 px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm z-10 transition-colors">
           <div className="flex items-center gap-4">
@@ -105,9 +105,9 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight transition-colors">Pedido #{pedido.id}</h2>
+                <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight transition-colors">Pedido #{pedido.numeroDiario || pedido.id}</h2>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${pedido.isRetiradaEstabelecimento ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                    {pedido.isRetiradaEstabelecimento ? 'Retirada' : 'Delivery'}
+                  {pedido.isRetiradaEstabelecimento ? 'Retirada' : 'Delivery'}
                 </span>
               </div>
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] transition-colors">
@@ -115,9 +115,9 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handlePrint}
               className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-orange-500 dark:hover:bg-orange-500 hover:text-white dark:hover:text-white rounded-xl transition-all"
               title="Imprimir Cupom"
@@ -132,31 +132,31 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-          
+
           {/* LÓGICA DE EXIBIÇÃO: RETIRADA VS DELIVERY */}
           {pedido.isRetiradaEstabelecimento ? (
-             // CARD DE RETIRADA
-             <div className="bg-orange-50 dark:bg-orange-900/10 p-6 rounded-3xl border-2 border-dashed border-orange-200 dark:border-orange-900/30 flex items-center gap-4 transition-colors">
-                <div className="bg-white dark:bg-orange-900/20 p-3 rounded-full">
-                    <Store className="text-orange-500" size={24} />
-                </div>
-                <div>
-                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Retirada no Balcão</h3>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">O cliente irá buscar o pedido no estabelecimento.</p>
-                </div>
-             </div>
+            // CARD DE RETIRADA
+            <div className="bg-orange-50 dark:bg-orange-900/10 p-6 rounded-3xl border-2 border-dashed border-orange-200 dark:border-orange-900/30 flex items-center gap-4 transition-colors">
+              <div className="bg-white dark:bg-orange-900/20 p-3 rounded-full">
+                <Store className="text-orange-500" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Retirada no Balcão</h3>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">O cliente irá buscar o pedido no estabelecimento.</p>
+              </div>
+            </div>
           ) : (
             // CARD DE ENDEREÇO (DELIVERY)
             <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <MapPin size={100} />
+                <MapPin size={100} />
               </div>
               <div className="flex items-center justify-between mb-4 relative z-10">
                 <div className="flex items-center gap-2 text-rose-500 transition-colors">
                   <MapPin size={16} />
                   <h3 className="text-xs font-black uppercase tracking-widest">Endereço de Entrega</h3>
                 </div>
-                <a 
+                <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${pedido.logadouroCliente}, ${pedido.numeroCliente} - ${pedido.bairroCliente}, ${pedido.cidadeCliente}`)}`}
                   target="_blank" rel="noreferrer"
                   className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase flex items-center gap-1 transition-colors hover:underline"
@@ -166,22 +166,22 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
               </div>
               <div className="text-sm font-medium bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 transition-colors relative z-10">
                 <p className="font-black text-slate-900 dark:text-slate-100 text-lg transition-colors">
-                    {pedido.logadouroCliente}, Nº {pedido.numeroCliente}
+                  {pedido.logadouroCliente}, Nº {pedido.numeroCliente}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                    {pedido.quadraCliente && (
-                        <span className="px-2 py-1 bg-white dark:bg-slate-700 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
-                            Quadra: {pedido.quadraCliente}
-                        </span>
-                    )}
-                    {pedido.loteCliente && (
-                        <span className="px-2 py-1 bg-white dark:bg-slate-700 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
-                            Lote: {pedido.loteCliente}
-                        </span>
-                    )}
+                  {pedido.quadraCliente && (
+                    <span className="px-2 py-1 bg-white dark:bg-slate-700 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                      Quadra: {pedido.quadraCliente}
+                    </span>
+                  )}
+                  {pedido.loteCliente && (
+                    <span className="px-2 py-1 bg-white dark:bg-slate-700 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                      Lote: {pedido.loteCliente}
+                    </span>
+                  )}
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 transition-colors uppercase text-xs font-bold tracking-wide">
-                    {pedido.bairroCliente} • {pedido.cidadeCliente}/{pedido.estadoCliente}
+                  {pedido.bairroCliente} • {pedido.cidadeCliente}/{pedido.estadoCliente}
                 </p>
               </div>
             </div>
@@ -213,14 +213,14 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{formaPagamentoNome}</p>
                 <div className="flex items-end justify-between mt-1">
-                    <p className="text-lg font-black text-emerald-600 dark:text-emerald-500 transition-colors">
+                  <p className="text-lg font-black text-emerald-600 dark:text-emerald-500 transition-colors">
                     R$ {Number(pedido.valorTotalPedido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    {!pedido.isRetiradaEstabelecimento && pedido.taxaEntrega && Number(pedido.taxaEntrega) > 0 && (
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">
-                            (Inclui Taxa: R$ {Number(pedido.taxaEntrega).toFixed(2)})
-                        </span>
-                    )}
+                  </p>
+                  {!pedido.isRetiradaEstabelecimento && pedido.taxaEntrega && Number(pedido.taxaEntrega) > 0 && (
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">
+                      (Inclui Taxa: R$ {Number(pedido.taxaEntrega).toFixed(2)})
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -238,7 +238,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
                 <span className="text-[10px] font-black uppercase tracking-widest">Ações Rápidas</span>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {quickTimes.map(time => (
@@ -265,14 +265,14 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
               </div>
 
               <div className="flex gap-2 pt-2">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 dark:text-slate-100 transition-all placeholder:text-slate-400"
                   placeholder="Ou digite algo personalizado..."
                   value={tempoEspera}
                   onChange={(e) => setTempoEspera(e.target.value)}
                 />
-                <button 
+                <button
                   onClick={handleSaveTempoEspera}
                   disabled={savingTempo}
                   className="bg-indigo-500 text-white px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-indigo-600 transition-all disabled:opacity-50 shadow-xl shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2 active:scale-95"
@@ -283,7 +283,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
                 </button>
               </div>
             </div>
-            
+
             {pedido.tempoEspera && (
               <div className="mt-4 flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
                 <CheckCircle size={14} className="text-emerald-500" />
@@ -321,9 +321,9 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
                         </div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-lg uppercase transition-colors">{item.produto?.nomeProduto || 'Produto'}</h4>
                       </div>
-                      <span className="text-xs font-bold text-slate-300 dark:text-slate-700 transition-colors">#ITEM-{idx+1}</span>
+                      <span className="text-xs font-bold text-slate-300 dark:text-slate-700 transition-colors">#ITEM-{idx + 1}</span>
                     </div>
-                    
+
                     <div className="p-6 space-y-4">
                       {item.subItensPedido && item.subItensPedido.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -365,28 +365,49 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ pedido, onClose, onStatusUpda
         {/* Footer Actions */}
         <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-10 transition-colors">
           <div className="grid grid-cols-1 gap-3">
-            {pedido.situacaoPedido === 'preparando' && (
-              <button 
+
+            {/* 1. BOTÃO: SAIU PARA ENTREGA 
+               - Só aparece se estiver 'preparando' E for Delivery (não for retirada) 
+            */}
+            {pedido.situacaoPedido === 'preparando' && !pedido.isRetiradaEstabelecimento && (
+              <button
                 onClick={() => handleStatusUpdate('entrega')}
                 disabled={updating}
                 className="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 dark:shadow-none flex items-center justify-center gap-3 transition-all"
               >
-                {updating ? <Loader2 className="animate-spin" /> : <><Truck size={20} /> {pedido.isRetiradaEstabelecimento ? 'Pronto para Retirada' : 'Saiu para Entrega'}</>}
+                {updating ? <Loader2 className="animate-spin" /> : <><Truck size={20} /> Saiu para Entrega</>}
               </button>
             )}
 
-            {pedido.situacaoPedido === 'entrega' && (
-              <button 
+            {/* 2. BOTÃO: FINALIZAR / PRONTO PARA RETIRADA
+               - Aparece se estiver 'entrega' (Delivery voltando)
+               - OU se estiver 'preparando' E for Retirada (pula etapa de entrega)
+            */}
+            {(pedido.situacaoPedido === 'entrega' || (pedido.situacaoPedido === 'preparando' && pedido.isRetiradaEstabelecimento)) && (
+              <button
                 onClick={() => handleStatusUpdate('finalizado')}
                 disabled={updating}
-                className="w-full bg-emerald-600 text-white py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest hover:bg-emerald-700 shadow-xl shadow-emerald-100 dark:shadow-none flex items-center justify-center gap-3 transition-all"
+                className={`w-full text-white py-5 rounded-[2rem] font-black uppercase text-sm tracking-widest shadow-xl dark:shadow-none flex items-center justify-center gap-3 transition-all ${pedido.isRetiradaEstabelecimento
+                    ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-100' // Cor Laranja para Retirada
+                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' // Cor Verde para Delivery Finalizado
+                  }`}
               >
-                {updating ? <Loader2 className="animate-spin" /> : <><CheckCircle size={20} /> Finalizar Pedido</>}
+                {updating ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <>
+                    {pedido.isRetiradaEstabelecimento ? <Store size={20} /> : <CheckCircle size={20} />}
+                    {pedido.isRetiradaEstabelecimento ? 'Pronto para Retirada & Finalizar' : 'Finalizar Pedido'}
+                  </>
+                )}
               </button>
             )}
 
+            {/* 3. BOTÃO: CANCELAR
+               - Aparece sempre, exceto se já finalizado ou cancelado
+            */}
             {pedido.situacaoPedido !== 'cancelado' && pedido.situacaoPedido !== 'finalizado' && (
-              <button 
+              <button
                 onClick={() => handleStatusUpdate('cancelado')}
                 disabled={updating}
                 className="w-full bg-white dark:bg-slate-800 text-rose-500 border-2 border-rose-100 dark:border-rose-900/30 py-4 rounded-[2rem] font-black uppercase text-xs tracking-widest hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center justify-center gap-3 transition-all"

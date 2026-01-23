@@ -1,9 +1,10 @@
+// types/config.ts
 
 export interface HorarioDia {
-  dia: number; // 0 (Domingo) a 6 (Sábado)
+  dia: number;
   aberto: boolean;
-  inicio: string; // formato "HH:mm"
-  fim: string;    // formato "HH:mm"
+  inicio: string;
+  fim: string;
 }
 
 export interface Config {
@@ -35,6 +36,10 @@ export interface Config {
   urlAgenteImpressao: string;
   nomeImpressora: string;
   horariosFuncionamento?: HorarioDia[];
+  
+  // --- NOVOS CAMPOS PIX ---
+  tipoChavePix?: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria';
+  chavePix?: string;
 }
 
 export interface UpdateConfigPayload {
@@ -63,4 +68,8 @@ export interface UpdateConfigPayload {
   urlAgenteImpressao?: string;
   nomeImpressora?: string;
   horariosFuncionamento?: HorarioDia[];
+  
+  // --- NOVOS CAMPOS PIX ---
+  tipoChavePix?: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria';
+  chavePix?: string;
 }

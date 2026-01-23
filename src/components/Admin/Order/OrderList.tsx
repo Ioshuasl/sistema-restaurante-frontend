@@ -60,7 +60,7 @@ const OrderList: React.FC<OrderListProps> = ({ pedidos, onViewDetails }) => {
               onClick={() => onViewDetails(pedido.id)}
             >
               <td className="px-6 py-4">
-                <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-600">#{pedido.id}</span>
+                <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-600">#{pedido.numeroDiario || pedido.id}</span>
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">

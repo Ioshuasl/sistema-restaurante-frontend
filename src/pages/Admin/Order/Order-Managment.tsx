@@ -122,12 +122,20 @@ export default function OrderManagment({ isDarkMode, toggleTheme }: Props) {
   const filteredPedidos = useMemo(() => {
     return pedidos.filter(p => {
       const term = searchTerm.toLowerCase();
-      const matchesSearch = p.nomeCliente?.toLowerCase().includes(term) || p.id.toString().includes(term);
+      
+      // LOGICA DE BUSCA ATUALIZADA
+      const matchesSearch = 
+        p.nomeCliente?.toLowerCase().includes(term) || 
+        p.id.toString().includes(term) ||
+        p.numeroDiario?.toString().includes(term); // <--- Adicionado busca por senha
+
       const matchesStatus = statusFilter === 'todos' || p.situacaoPedido === statusFilter;
+      // ... datas
       let matchesDate = true;
       const orderDate = new Date(p.createdAt).toISOString().split('T')[0];
       if (dateRange.start && orderDate < dateRange.start) matchesDate = false;
       if (dateRange.end && orderDate > dateRange.end) matchesDate = false;
+
       return matchesSearch && matchesStatus && matchesDate;
     });
   }, [pedidos, searchTerm, statusFilter, dateRange]);

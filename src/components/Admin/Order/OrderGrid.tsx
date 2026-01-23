@@ -31,7 +31,7 @@ const OrderGrid: React.FC<OrderGridProps> = ({ pedidos, onViewDetails }) => {
           
           <div className="flex justify-between items-start mb-6">
             <div className="bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl font-mono text-[10px] font-black text-slate-400 dark:text-slate-500 transition-colors">
-              #{pedido.id}
+              #{pedido.numeroDiario || pedido.id}
             </div>
             <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest text-white shadow-sm ${getStatusColor(pedido.situacaoPedido)}`}>
               {pedido.situacaoPedido}
