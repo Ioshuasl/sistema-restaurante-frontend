@@ -12,11 +12,11 @@ interface AdminHeaderProps {
   hasUnreadNotifications?: boolean;
 }
 
-const AdminHeader: React.FC<AdminHeaderProps> = ({ 
-  title, 
-  onMenuClick, 
+const AdminHeader: React.FC<AdminHeaderProps> = ({
+  title,
+  onMenuClick,
   showSearch = false,
-  hasUnreadNotifications = false 
+  hasUnreadNotifications = false
 }) => {
   const navigate = useNavigate();
   const [waStatus, setWaStatus] = useState<'open' | 'close' | 'error' | 'loading'>('loading');
@@ -25,11 +25,11 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
   const checkWhatsAppStatus = useCallback(async (name: string) => {
     try {
       const response = await connectionState({
-        serverUrl: 'https://evo.iaxionautomacao.online',
+        serverUrl: 'https://api-evolution-api.gbrqne.easypanel.host',
         instanceName: name,
-        apikey: 'DF538DBF53F12D86A5DF763C54721'
+        apikey: '429683C4C977415CAAFCCE10F7D57E11'
       });
-      
+
       if (response && response.instance) {
         setWaStatus(response.instance.state as any);
       } else {
@@ -72,13 +72,13 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         <h1 className="text-lg sm:text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight transition-colors hidden sm:block">
           {title}
         </h1>
-        
+
         {showSearch && (
           <div className="relative w-48 xl:w-80 hidden md:block ml-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Pesquisar..." 
+            <input
+              type="text"
+              placeholder="Pesquisar..."
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-10 pr-4 text-xs outline-none dark:text-slate-100 transition-all focus:ring-2 focus:ring-orange-500/20"
             />
           </div>
@@ -87,27 +87,24 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
 
       <div className="flex items-center gap-2 sm:gap-4">
         {/* WhatsApp Status Indicator */}
-        <Link 
+        <Link
           to="/admin/config"
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all hover:shadow-md active:scale-95 ${
-            waStatus === 'open' 
-            ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20' 
-            : 'bg-rose-50 border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20'
-          }`}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all hover:shadow-md active:scale-95 ${waStatus === 'open'
+              ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20'
+              : 'bg-rose-50 border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20'
+            }`}
         >
           <div className="relative flex h-2 w-2">
             {waStatus === 'open' && (
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             )}
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${
-              waStatus === 'open' ? 'bg-emerald-500' : 
-              waStatus === 'loading' ? 'bg-slate-300' : 'bg-rose-500'
-            }`}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${waStatus === 'open' ? 'bg-emerald-500' :
+                waStatus === 'loading' ? 'bg-slate-300' : 'bg-rose-500'
+              }`}></span>
           </div>
           <div className="flex flex-col leading-none hidden xs:block">
-            <span className={`text-[8px] font-black uppercase tracking-tighter ${
-              waStatus === 'open' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-            }`}>
+            <span className={`text-[8px] font-black uppercase tracking-tighter ${waStatus === 'open' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+              }`}>
               WhatsApp
             </span>
             <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
@@ -119,7 +116,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
 
         <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block"></div>
 
-        <button 
+        <button
           onClick={() => navigate('/admin/order')}
           className="relative p-2 text-slate-500 dark:text-slate-400 hover:text-orange-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
         >
