@@ -125,9 +125,9 @@ export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolea
         
         try {
             const connection = await connectInstance({
-                serverUrl: 'https://evo.iaxionautomacao.online',
+                serverUrl: 'https://evolution-api.ioshuavps.com.br',
                 instanceName: configData.evolutionInstanceName,
-                apikey: 'DF538DBF53F12D86A5DF763C54721'
+                apikey: '429683C4C977415CAAFCCE10F7D57E11'
             });
 
             if (connection?.base64) {
