@@ -16,10 +16,15 @@ export interface EvolutionConnectionState {
 }
 
 export interface EvolutionConnectionParams {
-  serverUrl: string;
+  serverUrl?: string;
   instanceName: string;
-  apikey: string;
+  apikey?: string;
 }
+
+const DEFAULT_EVOLUTION_SERVER_URL =
+  import.meta.env.VITE_EVOLUTION_API_URL || "https://ferramentas-evolution-api.hjikmq.easypanel.host";
+const DEFAULT_EVOLUTION_API_KEY =
+  import.meta.env.VITE_EVOLUTION_API_KEY || "BJADXYFYCAAPNRULQECAFZNVJDEOOCVE";
 
 /**
  * Conecta uma instância gerando um QR Code (Base64)
@@ -27,7 +32,9 @@ export interface EvolutionConnectionParams {
 export async function connectInstance(
   params: EvolutionConnectionParams
 ): Promise<EvolutionInstanceConnection | null> {
-  const { serverUrl, instanceName, apikey } = params;
+  const { instanceName } = params;
+  const serverUrl = params.serverUrl || DEFAULT_EVOLUTION_SERVER_URL;
+  const apikey = params.apikey || DEFAULT_EVOLUTION_API_KEY;
 
   if (!serverUrl || !serverUrl.startsWith("http")) {
     console.error("URL do servidor inválida.");
@@ -60,7 +67,9 @@ export async function connectInstance(
 export async function connectionState(
   params: EvolutionConnectionParams
 ): Promise<EvolutionConnectionState | null> {
-  const { serverUrl, instanceName, apikey } = params;
+  const { instanceName } = params;
+  const serverUrl = params.serverUrl || DEFAULT_EVOLUTION_SERVER_URL;
+  const apikey = params.apikey || DEFAULT_EVOLUTION_API_KEY;
 
   if (!serverUrl || !serverUrl.startsWith("http")) {
     console.error("URL do servidor inválida.");

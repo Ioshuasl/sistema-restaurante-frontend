@@ -125,9 +125,7 @@ export default function Config({ isDarkMode, toggleTheme }: { isDarkMode: boolea
         
         try {
             const connection = await connectInstance({
-                serverUrl: 'https://api-evolution-api.gbrqne.easypanel.host',
                 instanceName: configData.evolutionInstanceName,
-                apikey: '429683C4C977415CAAFCCE10F7D57E11'
             });
 
             if (connection?.base64) {

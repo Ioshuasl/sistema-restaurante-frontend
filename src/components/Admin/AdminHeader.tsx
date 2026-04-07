@@ -25,9 +25,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
   const checkWhatsAppStatus = useCallback(async (name: string) => {
     try {
       const response = await connectionState({
-        serverUrl: 'https://api-evolution-api.gbrqne.easypanel.host',
         instanceName: name,
-        apikey: '429683C4C977415CAAFCCE10F7D57E11'
       });
 
       if (response && response.instance) {

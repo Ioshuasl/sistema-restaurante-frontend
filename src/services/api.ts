@@ -1,13 +1,11 @@
 
 import axios from 'axios';
 
-//@ts-ignore
-const url_dev = 'http://localhost:3000/api';
-//@ts-ignore
-const url_producao = 'https://projeto-backend-restaurante.lwcbm0.easypanel.host/api';
+const DEFAULT_BACKEND_API_URL = 'https://projeto-backend-restaurante.lwcbm0.easypanel.host/api';
+const backendApiUrl = import.meta.env.VITE_BACKEND_API_URL || DEFAULT_BACKEND_API_URL;
 
 const api = axios.create({
-  baseURL: url_producao,
+  baseURL: backendApiUrl,
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true'
