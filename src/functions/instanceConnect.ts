@@ -22,9 +22,9 @@ export interface EvolutionConnectionParams {
 }
 
 const DEFAULT_EVOLUTION_SERVER_URL =
-  import.meta.env.VITE_EVOLUTION_API_URL || "https://ferramentas-evolution-api.hjikmq.easypanel.host";
+  import.meta.env.VITE_EVOLUTION_API_URL || "https://n8n-evolution-api.gmqoq2.easypanel.host";
 const DEFAULT_EVOLUTION_API_KEY =
-  import.meta.env.VITE_EVOLUTION_API_KEY || "BJADXYFYCAAPNRULQECAFZNVJDEOOCVE";
+  import.meta.env.VITE_EVOLUTION_API_KEY || "VRPL54A5YOBF954S6H074Y7S5PEZ";
 
 /**
  * Conecta uma instância gerando um QR Code (Base64)
